@@ -321,6 +321,22 @@ export const scheduleSession = async (req, res, next) => {
         message: 'This exchange request has not been accepted'
       });
     }
+
+    exchange.scheduledSessions.push({
+      date,
+      startTime,
+      endTime,
+      type,
+      location,
+      meetingLink
+    });
+    await exchange.save();
+
+    res.json({
+      success: true,
+      message: 'Session scheduled successfully',
+      data: { exchange }
+    });
   } catch (error) {
     next(error);
   }
@@ -352,6 +368,11 @@ export const completeExchange = async (req, res, next) => {
 
     exchange.status = 'completed';
     exchange.completedAt = Date.now();
+    if (Array.isArray(exchange.scheduledSessions)) {
+      exchange.scheduledSessions.forEach(session => {
+        session.completed = true;
+      });
+    }
     await exchange.save();
 
     res.json({

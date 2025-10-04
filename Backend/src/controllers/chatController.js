@@ -54,7 +54,8 @@ export const getChatById = async (req, res, next) => {
 
     // Mark messages as read
     chat.messages.forEach(msg => {
-      if (msg.sender.toString() !== req.user.id && !msg.read) {
+      const senderId = msg.sender && msg.sender._id ? msg.sender._id.toString() : msg.sender.toString();
+      if (senderId !== req.user.id && !msg.read) {
         msg.read = true;
       }
     });

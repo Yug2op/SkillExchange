@@ -36,6 +36,7 @@ export const uploadLimiter = rateLimit({
 export const chatLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
   max: 5,
+  keyGenerator: (req, res) => (req.user && req.user.id) ? req.user.id : req.ip,
   message: {
     success: false,
     message: 'Too many chat requests, please try again after 15 minutes'

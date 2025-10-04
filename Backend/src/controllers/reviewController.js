@@ -7,7 +7,7 @@ import User from '../models/User.js';
 // @access  Private
 export const createReview = async (req, res, next) => {
   try {
-    const { revieweeId, exchangeId, rating, feedback, skillTaught, aspectRatings } = req.body;
+    const { revieweeId, exchangeId, rating, feedback, skillTaught, aspectRatings,isPublic } = req.body;
 
     // Validate rating
     if (rating < 1 || rating > 5) {
@@ -79,7 +79,8 @@ export const createReview = async (req, res, next) => {
       rating,
       feedback,
       skillTaught,
-      aspectRatings
+      aspectRatings,
+      isPublic
     });
 
     await review.populate('reviewer reviewee', 'name profilePic');
@@ -214,7 +215,6 @@ export const updateReview = async (req, res, next) => {
     }
 
     const { rating, feedback, aspectRatings, isPublic } = req.body;
-
     if (rating) review.rating = rating;
     if (feedback) review.feedback = feedback;
     if (aspectRatings) review.aspectRatings = aspectRatings;
