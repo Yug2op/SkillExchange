@@ -1,3 +1,5 @@
 Frontend
 Backend.postman.json
 package-lock.json
+node_modules
+.vscode
