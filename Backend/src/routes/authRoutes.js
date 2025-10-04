@@ -6,7 +6,8 @@ import {
   verifyEmail,
   forgotPassword,
   resetPassword,
-  changePassword
+  changePassword,
+  logout
 } from '../controllers/authController.js';
 import {
   registerValidation,
@@ -26,5 +27,6 @@ router.post('/verify-email', verifyEmail);
 router.post('/forgot-password', emailValidation, validate, forgotPassword);
 router.post('/reset-password', resetPassword);
 router.put('/change-password', protect, changePassword);
+router.post('/logout', logout);
 
 export default router;

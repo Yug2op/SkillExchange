@@ -15,7 +15,7 @@ const generateToken = (id) => {
 // @access  Public
 export const register = async (req, res, next) => {
   try {
-    const { name, email, password, skillsToTeach, skillsToLearn,role } = req.body;
+    const { name, email, password, skillsToTeach, skillsToLearn, role } = req.body;
 
     // Check if user exists
     const existingUser = await User.findOne({ email });
@@ -47,7 +47,7 @@ export const register = async (req, res, next) => {
 
     // Send verification email
     const verificationUrl = `${process.env.CLIENT_URL}/verify-email?token=${verificationToken}`;
-    
+
     try {
       await sendEmail({
         email: user.email,
@@ -335,6 +335,28 @@ export const changePassword = async (req, res, next) => {
     res.json({
       success: true,
       message: 'Password changed successfully'
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// @desc    Logout user (clear auth cookie)
+// @route   POST /api/auth/logout
+// @access  Public
+export const logout = async (req, res, next) => {
+  try {
+    const cookieOptions = {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'lax',
+    };
+
+    res.clearCookie('token', cookieOptions);
+
+    return res.json({
+      success: true,
+      message: 'Logged out successfully'
     });
   } catch (error) {
     next(error);
