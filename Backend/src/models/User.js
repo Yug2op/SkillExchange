@@ -89,6 +89,10 @@ const userSchema = new mongoose.Schema({
     type: Boolean,
     default: true
   },
+  isOnline: {
+    type: Boolean,
+    default: false
+  },
   lastActive: {
     type: Date,
     default: Date.now

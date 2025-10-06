@@ -2,7 +2,7 @@ import rateLimit from 'express-rate-limit';
 
 // General API rate limiter
 export const generalLimiter = rateLimit({
-  windowMs: parseInt(process.env.RATE_LIMIT_WINDOW_MS) || 15 * 60 * 1000,
+  windowMs: parseInt(process.env.RATE_LIMIT_WINDOW_MS) || 30 * 60 * 1000,
   max: parseInt(process.env.RATE_LIMIT_MAX_REQUESTS) || 100,
   message: {
     success: false,
@@ -34,8 +34,8 @@ export const uploadLimiter = rateLimit({
 });
 // Chat routes limiter
 export const chatLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000,
-  max: 5,
+  windowMs: 150 * 60 * 1000,
+  max: 5000,
   keyGenerator: (req, res) => (req.user && req.user.id) ? req.user.id : req.ip,
   message: {
     success: false,

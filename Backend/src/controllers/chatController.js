@@ -127,7 +127,7 @@ export const sendMessage = async (req, res, next) => {
   }
 };
 
-// @desc    Get unread message count
+// @desc    Get unread message count per chat
 // @route   GET /api/chat/unread/count
 // @access  Private
 export const getUnreadCount = async (req, res, next) => {
@@ -137,24 +137,24 @@ export const getUnreadCount = async (req, res, next) => {
       isActive: true
     });
 
-    let unreadCount = 0;
+    const unreadCounts = chats.map(chat => {
+      const count = chat.messages.reduce((acc, msg) => {
+        if (msg.sender.toString() !== req.user.id && !msg.read) acc++;
+        return acc;
+      }, 0);
 
-    chats.forEach(chat => {
-      chat.messages.forEach(msg => {
-        if (msg.sender.toString() !== req.user.id && !msg.read) {
-          unreadCount++;
-        }
-      });
+      return { _id: chat._id, count };
     });
 
     res.json({
       success: true,
-      data: { unreadCount }
+      data: unreadCounts
     });
   } catch (error) {
     next(error);
   }
 };
+
 
 // @desc    Delete chat
 // @route   DELETE /api/chat/:id
