@@ -14,10 +14,10 @@ export const searchUsers = async ({ teach, learn, location, page = 1, limit = 20
   return data;
 };
 
-// GET /api/users/matches (auth)
-export const getMatches = async () => {
-  const { data } = await api.get('/api/users/matches');
-  return data;
+// GET /api/users/matches?page=&limit=
+export const getMatches = async ({ page = 1, limit = 12 } = {}) => {
+  const { data } = await api.get('/api/users/matches', { params: { page, limit } });
+  return data; // { success, data: { users, page, totalPages, total } }
 };
 
 // GET /api/users/:id

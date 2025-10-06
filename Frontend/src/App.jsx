@@ -10,10 +10,19 @@ import ProtectedRoute from './components/ProtectedRoute.jsx';
 import MeProfile from './pages/profile/Me.jsx';
 import { useMe } from '@/hooks/useMe';
 import { useLogout } from '@/hooks/useLogout';
+import ChangePassword from './pages/auth/ChangePassword.jsx';
+import SearchUsersPage from './pages/users/Search.jsx';
+import MatchesPage from './pages/users/Matches.jsx';
+import UserDetailPage from './pages/users/UserDetail.jsx';
+import RequestExchange from './pages/exchanges/RequestExchange.jsx';
+import ExchangesPage from './pages/exchanges/List';
+import ExchangeDetailPage from './pages/exchanges/Detail';
+import ChatPage from './pages/chat';
 
 export default function App() {
   const { data: user, isLoading: meLoading } = useMe();
   const { mutate: doLogout, isPending: loggingOut } = useLogout();
+
   return (
     <div className="min-h-dvh bg-background text-foreground">
       <header className="border-b">
@@ -47,24 +56,49 @@ export default function App() {
         <Suspense fallback={<div className="p-6">Loading...</div>}>
           <Routes>
             <Route path="/" element={<Home />} />
-            {/* We’ll implement these pages next */}
             <Route path="/login" element={<LoginPage />} />
             <Route path="/register" element={<RegisterPage />} />
             <Route path="/forgot-password" element={<ForgotPassword />} />
             <Route path="/reset-password" element={<ResetPassword />} />
             <Route path="/verify-email" element={<VerifyEmail />} />
-            {/* <Route path="/search" element={<SearchUsersPage />} /> */}
-            {/* <Route path="/matches" element={<MatchesPage />} /> */}
-            {/* <Route path="/users/:id" element={<UserProfilePage />} /> */}
-            {/* <Route path="/exchanges" element={<ExchangesPage />} /> */}
-            {/* <Route path="/chat" element={<ChatListPage />} /> */}
-            {/* <Route path="/chat/:id" element={<ChatRoomPage />} /> */}
-            {/* <Route path="/admin" element={<AdminDashboardPage />} /> */}
+            <Route path="/search" element={<SearchUsersPage />} />
+            <Route path="/matches" element={<MatchesPage />} />
+            <Route path="/users/:id" element={<UserDetailPage />} />
+            <Route path="/exchanges/request/:id" element={<RequestExchange />} />
+            <Route path="/exchanges" element={<ExchangesPage />} />
+            <Route path="/exchanges/:id" element={<ExchangeDetailPage />} />
+
+            {/* Chat Routes */}
+            <Route
+              path="/chat"
+              element={
+                <ProtectedRoute>
+                  <ChatPage />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/chat/:chatId"
+              element={
+                <ProtectedRoute>
+                  <ChatPage />
+                </ProtectedRoute>
+              }
+            />
+
             <Route
               path="/me"
               element={
                 <ProtectedRoute>
                   <MeProfile />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/change-password"
+              element={
+                <ProtectedRoute>
+                  <ChangePassword />
                 </ProtectedRoute>
               }
             />

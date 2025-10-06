@@ -4,6 +4,7 @@ import { useQueryClient, useMutation } from '@tanstack/react-query';
 import { useMe } from '@/hooks/useMe';
 import { updateUser, uploadProfilePic } from '@/api/UserApi';
 import { toast } from 'sonner';
+import { Link } from 'react-router-dom';
 
 export default function MeProfile() {
   const qc = useQueryClient();
@@ -67,6 +68,12 @@ export default function MeProfile() {
 
   return (
     <div className="container mx-auto max-w-2xl px-4 py-10 space-y-8">
+      <div className="flex items-center gap-3">
+  <h1 className="text-xl font-semibold">My Profile</h1>
+  <Link to="/change-password" className="text-sm text-primary hover:underline">
+    Change password
+  </Link>
+</div>
       <div className="flex items-center gap-4">
         <img
           src={user?.profilePic?.url || 'https://via.placeholder.com/80x80?text=Avatar'}

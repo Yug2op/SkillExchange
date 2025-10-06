@@ -1,11 +1,12 @@
 import { useForm } from 'react-hook-form';
-import { useMutation } from '@tanstack/react-query';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { login } from '@/api/AuthApi';
 import { toast } from 'sonner';
 import { useNavigate, Link } from 'react-router-dom';
 
 export default function Login() {
   const navigate = useNavigate();
+  const qc = useQueryClient();
   const { register, handleSubmit, formState: { errors, isSubmitting } } = useForm({
     defaultValues: { email: '', password: '' },
   });
@@ -14,7 +15,15 @@ export default function Login() {
     mutationFn: (values) => login(values),
     onSuccess: (res) => {
       toast.success(res.message || 'Login successful');
-      sessionStorage.setItem('socketToken', res?.data?.token || ''); // for Socket.io only
+      // Update socket token (for Socket.io only)
+      sessionStorage.setItem('socketToken', res?.data?.token || '');
+      // Immediately update the cached current user so header updates without refresh
+      if (res?.data?.user) {
+        qc.setQueryData(['me'], res.data.user);
+      } else {
+        // Fallback: refetch me
+        qc.invalidateQueries({ queryKey: ['me'] });
+      }
       navigate('/');
     },
     onError: (err) => toast.error(err?.message || 'Login failed'),

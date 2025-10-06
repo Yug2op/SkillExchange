@@ -11,6 +11,9 @@ export function useLogout() {
     mutationFn: logout,
     onSuccess: (res) => {
       sessionStorage.removeItem('socketToken');
+      // Immediately clear cached current user so header updates without refresh
+      qc.setQueryData(['me'], null);
+      // Then refetch to confirm session state
       qc.invalidateQueries({ queryKey: ['me'] });
       toast.success(res.message || 'Logged out');
       navigate('/login');
