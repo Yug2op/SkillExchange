@@ -10,7 +10,7 @@ export function useLogout() {
   return useMutation({
     mutationFn: logout,
     onSuccess: (res) => {
-      sessionStorage.removeItem('socketToken');
+      localStorage.removeItem('socketToken');
       // Immediately clear cached current user so header updates without refresh
       qc.setQueryData(['me'], null);
       // Then refetch to confirm session state

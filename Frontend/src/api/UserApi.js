@@ -2,8 +2,9 @@
 import { api } from './client';
 
 // GET /api/users/search
-export const searchUsers = async ({ teach, learn, location, page = 1, limit = 20 } = {}) => {
+export const searchUsers = async ({ q, teach, learn, location, page = 1, limit = 20 } = {}) => {
   const params = {};
+  if (q) params.q = q;
   if (teach) params.teach = teach;
   if (learn) params.learn = learn;
   if (location) params.location = location;
@@ -13,6 +14,7 @@ export const searchUsers = async ({ teach, learn, location, page = 1, limit = 20
   const { data } = await api.get('/api/users/search', { params });
   return data;
 };
+
 
 // GET /api/users/matches?page=&limit=
 export const getMatches = async ({ page = 1, limit = 12 } = {}) => {

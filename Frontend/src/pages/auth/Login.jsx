@@ -16,7 +16,7 @@ export default function Login() {
     onSuccess: (res) => {
       toast.success(res.message || 'Login successful');
       // Update socket token (for Socket.io only)
-      sessionStorage.setItem('socketToken', res?.data?.token || '');
+      localStorage.setItem('socketToken', res?.data?.token || '');
       // Immediately update the cached current user so header updates without refresh
       if (res?.data?.user) {
         qc.setQueryData(['me'], res.data.user);

@@ -18,8 +18,30 @@ import RequestExchange from './pages/exchanges/RequestExchange.jsx';
 import ExchangesPage from './pages/exchanges/List';
 import ExchangeDetailPage from './pages/exchanges/Detail';
 import ChatPage from './pages/chat';
+import { ChatProvider } from './contexts/ChatContext.jsx';
+import { useEffect } from 'react';
+import socketService from '../lib/socket.js';
 
 export default function App() {
+    useEffect(() => {
+      const token = localStorage.getItem('socketToken');
+      console.log(token);
+      
+      if (token) {
+        socketService.connect().then(() => {
+          socketService.setOnline();
+          console.log('✅ User set online globally');
+        }).catch(err => {
+          console.error('❌ Global socket connection failed:', err);
+        });
+      }
+  
+      return () => {
+        // Only disconnect if needed
+        // socketService.disconnect();
+      };
+    }, []);
+
   const { data: user, isLoading: meLoading } = useMe();
   const { mutate: doLogout, isPending: loggingOut } = useLogout();
 
@@ -69,11 +91,13 @@ export default function App() {
             <Route path="/exchanges/:id" element={<ExchangeDetailPage />} />
 
             {/* Chat Routes */}
-            <Route
+                        <Route
               path="/chat"
               element={
                 <ProtectedRoute>
-                  <ChatPage />
+                  <ChatProvider>
+                    <ChatPage />
+                  </ChatProvider>
                 </ProtectedRoute>
               }
             />
@@ -81,7 +105,9 @@ export default function App() {
               path="/chat/:chatId"
               element={
                 <ProtectedRoute>
-                  <ChatPage />
+                  <ChatProvider>
+                    <ChatPage />
+                  </ChatProvider>
                 </ProtectedRoute>
               }
             />
