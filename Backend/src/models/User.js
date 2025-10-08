@@ -104,7 +104,6 @@ const userSchema = new mongoose.Schema({
 });
 
 // Indexes for better query performance
-userSchema.index({ email: 1 });
 userSchema.index({ skillsToTeach: 1 });
 userSchema.index({ skillsToLearn: 1 });
 userSchema.index({ 'location.city': 1 });

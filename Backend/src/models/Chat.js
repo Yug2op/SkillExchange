@@ -1,53 +1,168 @@
-import mongoose from 'mongoose';
+  import mongoose from 'mongoose';
 
-const messageSchema = new mongoose.Schema({
-  sender: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: 'User',
-    required: true
-  },
-  text: {
-    type: String,
-    required: true,
-    maxlength: 2000
-  },
-  timestamp: {
-    type: Date,
-    default: Date.now
-  },
-  read: {
-    type: Boolean,
-    default: false
-  }
-});
+  // Message sub-schema for individual messages in a chat
+  const messageSchema = new mongoose.Schema({
+    sender: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'User',
+      required: true
+    },
+    text: {
+      type: String,
+      required: true,
+      trim: true,
+      maxlength: 2000
+    },
+    timestamp: {
+      type: Date,
+      default: Date.now
+    },
+    read: {
+      type: Boolean,
+      default: false
+    },
+    messageType: {
+      type: String,
+      enum: ['text', 'file', 'image'],
+      default: 'text'
+    },
+    fileUrl: {
+      type: String,
+      default: null
+    },
+    fileName: {
+      type: String,
+      default: null
+    }
+  }, { _id: true });
 
-const chatSchema = new mongoose.Schema({
-  participants: [{
-    type: mongoose.Schema.Types.ObjectId,
-    ref: 'User',
-    required: true
-  }],
-  exchange: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: 'ExchangeRequest'
-  },
-  messages: [messageSchema],
-  lastMessage: String,
-  lastMessageAt: {
-    type: Date,
-    default: Date.now
-  },
-  isActive: {
-    type: Boolean,
-    default: true
-  }
-}, {
-  timestamps: true
-});
+  // Chat schema for the main chat document
+  const chatSchema = new mongoose.Schema({
+    // Array of user IDs participating in the chat
+    participants: [{
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'User',
+      required: true
+    }],
 
-// Indexes
-chatSchema.index({ participants: 1 });
-chatSchema.index({ lastMessageAt: -1 });
-chatSchema.index({ 'messages.sender': 1, 'messages.read': 1 });
+    // Optional exchange request that initiated the chat
+    exchange: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'ExchangeRequest',
+      default: null
+    },
 
-export default mongoose.model('Chat', chatSchema);
+    // Array of messages in chronological order
+    messages: [messageSchema],
+
+    // Last message text for quick display
+    lastMessage: {
+      type: String,
+      default: null
+    },
+
+    // Timestamp of the last message
+    lastMessageAt: {
+      type: Date,
+      default: Date.now
+    },
+
+    // Chat status
+    isActive: {
+      type: Boolean,
+      default: true
+    },
+
+    // Chat type for different contexts (exchange, general, support)
+    chatType: {
+      type: String,
+      enum: ['exchange', 'general', 'support'],
+      default: 'general'
+    },
+
+    // Optional chat name for group chats (future feature)
+    name: {
+      type: String,
+      default: null
+    },
+
+    // Chat settings
+    settings: {
+      notifications: {
+        type: Boolean,
+        default: true
+      },
+      soundEnabled: {
+        type: Boolean,
+        default: true
+      }
+    }
+  }, {
+    timestamps: true
+  });
+
+  // Indexes for better query performance
+  chatSchema.index({ participants: 1 }); // For finding chats between users
+  chatSchema.index({ lastMessageAt: -1 }); // For sorting chats by recent activity
+  chatSchema.index({ 'messages.sender': 1, 'messages.read': 1 }); // For unread message queries
+  chatSchema.index({ exchange: 1 }); // For finding chats related to specific exchanges
+  chatSchema.index({ isActive: 1, lastMessageAt: -1 }); // For active chat queries
+
+  // Virtual for getting unread message count
+  chatSchema.virtual('unreadCount').get(function() {
+    if (!this.messages || this.messages.length === 0) return 0;
+    
+    return this.messages.filter(msg => !msg.read).length;
+  });
+
+  // Instance method to add message
+chatSchema.methods.addMessage = async function(userId, text, messageType = 'text', fileData = null) {
+  const msg = { sender: userId, text, messageType, fileData, read: false, timestamp: new Date() };
+  this.messages.push(msg);
+  this.lastMessage = text
+  this.lastMessageAt = msg.timestamp;
+  await this.save();
+  return msg;
+};
+
+  // Method to mark messages as read
+  chatSchema.methods.markMessagesAsRead = function(userId) {
+    let hasChanges = false;
+    
+    this.messages.forEach(message => {
+      if (message.sender.toString() !== userId.toString() && !message.read) {
+        message.read = true;
+        hasChanges = true;
+      }
+    });
+
+    if (hasChanges) {
+      return this.save();
+    }
+    
+    return Promise.resolve(this);
+  };
+
+  // Static method to find or create a chat between two users
+  chatSchema.statics.findOrCreateChat = async function(participant1, participant2, exchangeId = null) {
+    // Look for existing active chat between these participants
+    let chat = await this.findOne({
+      participants: { $all: [participant1, participant2] },
+      isActive: true,
+      ...(exchangeId && { exchange: exchangeId })
+    });
+
+    if (!chat) {
+      // Create new chat if none exists
+      chat = new this({
+        participants: [participant1, participant2],
+        exchange: exchangeId,
+        chatType: exchangeId ? 'exchange' : 'general'
+      });
+      await chat.save();
+    }
+
+    return chat;
+  };
+
+  export default mongoose.model('Chat', chatSchema);

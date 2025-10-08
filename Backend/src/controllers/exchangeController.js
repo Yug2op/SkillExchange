@@ -177,26 +177,36 @@ export const acceptExchange = async (req, res, next) => {
 
     exchange.status = 'accepted';
 
-    // Create chat for the exchange
-    const chat = await Chat.create({
-      participants: [exchange.sender, exchange.receiver],
-      exchange: exchange._id
+    // Find or create chat for the exchange
+    // First, try to find existing chat between these users
+    let chat = await Chat.findOne({
+      participants: { $all: [exchange.sender, exchange.receiver] },
+      isActive: true
     });
 
-    exchange.chat = chat._id;
-    await exchange.save();
+    if (!chat) {
+      // Create new chat if none exists
+      chat = await Chat.create({
+        participants: [exchange.sender, exchange.receiver],
+        exchange: exchange._id,
+        chatType: 'exchange'
+      });
+    } else {
+      // If chat exists, just link this exchange to it
+      // (don't overwrite existing exchange link if any)
+      if (!chat.exchange) {
+        chat.exchange = exchange._id;
+        await chat.save();
+      }
+    }
+
+    // Ensure the exchange is linked to the chat
+    if (!exchange.chat) {
+      exchange.chat = chat._id;
+      await exchange.save();
+    }
 
     await exchange.populate('sender receiver', 'name email profilePic');
-
-    // Notify sender
-    try {
-      const io = getIO();
-      io.to(exchange.sender.toString()).emit('exchange-accepted', {
-        exchange
-      });
-    } catch (error) {
-      console.error('Socket notification failed:', error);
-    }
 
     res.json({
       success: true,

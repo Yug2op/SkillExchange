@@ -156,23 +156,43 @@ export const uploadProfilePicture = async (req, res, next) => {
 // @access  Public
 export const searchUsers = async (req, res, next) => {
   try {
-    const { teach, learn, location, page = 1, limit = 20 } = req.query;
+    const { q, teach, learn, location, page = 1, limit = 20 } = req.query;
 
     const query = { isActive: true };
+    const orConditions = [];
 
+    // General text search (name, bio, skills)
+    const qTrimmed = q?.trim();
+
+    if (qTrimmed && qTrimmed.length > 0) {
+      orConditions.push(
+        { name: { $regex: q, $options: 'i' } },
+        { bio: { $regex: q, $options: 'i' } },
+        { skillsToTeach: { $regex: q, $options: 'i' } },
+        { skillsToLearn: { $regex: q, $options: 'i' } }
+      );
+    } 
+
+    // Skills search
     if (teach) {
-      query.skillsToTeach = { $regex: teach, $options: 'i' };
+      orConditions.push({ skillsToTeach: { $regex: teach, $options: 'i' } });
     }
 
     if (learn) {
-      query.skillsToLearn = { $regex: learn, $options: 'i' };
+      orConditions.push({ skillsToLearn: { $regex: learn, $options: 'i' } });
     }
 
+    // Location search
     if (location) {
-      query.$or = [
+      orConditions.push(
         { 'location.city': { $regex: location, $options: 'i' } },
         { 'location.country': { $regex: location, $options: 'i' } }
-      ];
+      );
+    }
+
+    // If we have any search conditions, use $or
+    if (orConditions.length > 0) {
+      query.$or = orConditions;
     }
 
     const skip = (page - 1) * limit;
