@@ -111,11 +111,11 @@ function SkillsSelection({
             } catch (error) {
                 console.error('Error suggesting skill:', error);
                 toast.error('Failed to submit suggestion', {
-                description: error?.message || 'Please try again later.',
-                duration: 4000,
-            });
+                    description: error?.message || 'Please try again later.',
+                    duration: 4000,
+                });
             }
-        } else{
+        } else {
             toast.error('Missing information', {
                 description: 'Please provide both skill name and category.',
                 duration: 3000,
@@ -201,19 +201,45 @@ function SkillsSelection({
                                     </div>
                                     <div className="grid gap-2">
                                         <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Category</label>
-                                        <Select
-                                            value={newSkillSuggestion.category}
-                                            onValueChange={(value) => setNewSkillSuggestion(prev => ({ ...prev, category: value }))}
-                                        >
-                                            <SelectTrigger>
-                                                <SelectValue placeholder="Select category" />
-                                            </SelectTrigger>
-                                            <SelectContent>
-                                                {categories.map(cat => (
-                                                    <SelectItem key={cat} value={cat}>{cat}</SelectItem>
-                                                ))}
-                                            </SelectContent>
-                                        </Select>
+                                            <div className="space-y-2">
+                                                {/* Existing Categories Option */}
+                                                <Select
+                                                    value={newSkillSuggestion.category}
+                                                    onValueChange={(value) => setNewSkillSuggestion(prev => ({ ...prev, category: value, customCategory: '' }))}
+                                                >
+                                                    <SelectTrigger>
+                                                        <SelectValue placeholder="Select existing category (optional)" />
+                                                    </SelectTrigger>
+                                                    <SelectContent>
+                                                        {categories.map(cat => (
+                                                            <SelectItem key={cat} value={cat}>{cat}</SelectItem>
+                                                        ))}
+                                                    </SelectContent>
+                                                </Select>
+
+                                                {/* Custom Category Input */}
+                                                <div className="relative">
+                                                    <Input
+                                                        value={newSkillSuggestion.customCategory || ''}
+                                                        onChange={(e) => setNewSkillSuggestion(prev => ({
+                                                            ...prev,
+                                                            customCategory: e.target.value,
+                                                            category: e.target.value || prev.category // Use custom if provided, fallback to selected
+                                                        }))}
+                                                        placeholder="Or enter new category name"
+                                                        className="pr-8"
+                                                    />
+                                                    {newSkillSuggestion.customCategory && (
+                                                        <CheckCircle className="absolute right-2 top-2.5 h-4 w-4 text-green-500" />
+                                                    )}
+                                                </div>
+                                            </div>
+
+                                            <p className="text-xs text-gray-500 dark:text-gray-400">
+                                                Select an existing category above or enter a new one below for your skill suggestion.
+                                            </p>
+
+                                        
                                     </div>
                                     <div className="grid gap-2">
                                         <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Description (Optional)</label>

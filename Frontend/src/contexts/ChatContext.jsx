@@ -56,9 +56,9 @@ const chatReducer = (state, action) => {
     case 'SET_ACTIVE_CHAT':
       return { ...state, activeChat: action.payload, messages: action.payload?.messages || [] };
     case 'ADD_MESSAGE':
+      // Only add messages for the currently active chat
       if (state.activeChat && state.activeChat._id === action.payload.chatId) {
         const newMessage = action.payload.message;
-        const targetChatId = action.payload.chatId;
 
         // Check if message already exists (prevent duplicates)
         const messageExists = state.messages.some(msg => {
@@ -81,14 +81,15 @@ const chatReducer = (state, action) => {
         return {
           ...state,
           messages: updatedMessages,
-          activeChat: state.activeChat && state.activeChat._id === targetChatId ? {
+          activeChat: {
             ...state.activeChat,
-            messages: updatedMessages,
-          } : state.activeChat
+            messages: updatedMessages
+          }
         };
       }
-      return state;
-    case 'UPDATE_MESSAGE':
+      return state; // Don't add messages for non-active chats
+
+      case 'UPDATE_MESSAGE':
       return {
         ...state,
         messages: state.messages.map(msg =>
@@ -96,6 +97,11 @@ const chatReducer = (state, action) => {
             ? { ...msg, ...action.payload.updates }
             : msg
         )
+      };
+    case 'UPDATE_MESSAGES':
+      return {
+        ...state,
+        messages: action.payload
       };
     case 'SET_UNREAD_COUNTS': return { ...state, unreadCounts: action.payload };
     case 'UPDATE_UNREAD_COUNT':
@@ -134,7 +140,7 @@ const chatReducer = (state, action) => {
 export const ChatProvider = ({ children }) => {
   const [state, dispatch] = useReducer(chatReducer, initialState);
   const lastLoadedChatRef = useRef({});
-  const CACHE_DURATION = 3000;
+  const CACHE_DURATION = 5 * 60 * 1000;
   const { data: currentUser } = useMe();
   const typingTimeoutRef = useRef({});
   const listenersSetupRef = useRef(false);
@@ -297,21 +303,24 @@ export const ChatProvider = ({ children }) => {
     });
 
     socketService.on('user-typing', ({ userId, chatId }) => {
-      dispatch({ type: 'ADD_TYPING_USER', payload: {userId, chatId} });
-
+      // Clear any existing timeout for this user in this chat
       if (typingTimeoutRef.current[userId]) {
         clearTimeout(typingTimeoutRef.current[userId]);
       }
 
+      dispatch({ type: 'ADD_TYPING_USER', payload: { userId, chatId } });
+
+      // Set a more reasonable timeout (3 seconds instead of 5)
       typingTimeoutRef.current[userId] = setTimeout(() => {
         dispatch({ type: 'REMOVE_TYPING_USER', payload: userId });
         delete typingTimeoutRef.current[userId];
-      }, 3000);
+      }, 3000); // Reduced from 5000ms to 3000ms
     });
 
-    socketService.on('user-stop-typing', ({ userId }) => {
-      dispatch({ type: 'REMOVE_TYPING_USER', payload: userId });
+    socketService.on('user-stop-typing', ({ userId, chatId }) => {
+      dispatch({ type: 'REMOVE_TYPING_USER', payload: { userId, chatId } });
 
+      // Clear timeout for this user
       if (typingTimeoutRef.current[userId]) {
         clearTimeout(typingTimeoutRef.current[userId]);
         delete typingTimeoutRef.current[userId];
@@ -475,11 +484,9 @@ export const ChatProvider = ({ children }) => {
       dispatch({ type: 'SET_LOADING', payload: true });
 
       const currentState = stateRef.current;
-
-      // Handle both cases: prioritize activeChat.messages, fallback to global messages
       const existingMessages = currentState.activeChat?._id === chatId
-        ? (currentState.activeChat.messages || currentState.messages || [])
-        : (currentState.messages || []);
+        ? (currentState.activeChat.messages || [])
+        : ([]);
 
 
       const res = await chatApi.getChatById(chatId);
@@ -686,10 +693,13 @@ export const ChatProvider = ({ children }) => {
 
       // Only mark messages as read if this is the currently active chat
       const currentState = stateRef.current;
-      if (!currentState.activeChat || currentState.activeChat._id !== chatId) {
-        console.warn(`markMessagesAsRead: Chat ${chatId} is not the active chat`);
-        return;
-      }
+      // if (!currentState.activeChat || currentState.activeChat._id !== chatId) {
+      //   console.warn(`markMessagesAsRead: Chat ${chatId} is not the active chat`);
+      //   return;
+      // }
+
+
+      // Helper function to update read status consistently
 
       // Helper function to update read status consistently
       const updateReadStatus = (messages) => {

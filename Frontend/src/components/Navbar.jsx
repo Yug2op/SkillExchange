@@ -26,6 +26,7 @@ import {
 } from 'lucide-react';
 import { useMe } from '@/hooks/useMe';
 import { useLogout } from '@/hooks/useLogout';
+import { useChat } from '@/contexts/ChatContext'; 
 import { Fragment } from 'react';
 import useNotifications from '@/hooks/useNotifications';
 
@@ -85,6 +86,9 @@ const Navbar = () => {
 
   const NavLink = ({ item }) => {
     const isActive = activePath === item.path;
+    const { state: chatState } = useChat(); 
+    const totalUnread = Object.values(chatState.unreadCounts).reduce((sum, count) => sum + count, 0);
+
     return (
       <Link
         to={item.path}
@@ -93,7 +97,14 @@ const Navbar = () => {
           : 'text-gray-600 dark:text-gray-300 hover:text-black dark:hover:text-white hover:bg-gray-100 dark:hover:bg-white/10'
           }`}
       >
-        <item.icon size={20} className="flex-shrink-0" />
+        <div className="relative flex-shrink-0">
+          <item.icon size={20} className="flex-shrink-0" />
+          {item.path === '/chat' && totalUnread > 0 && (
+            <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center min-w-[20px] text-center font-medium">
+              {totalUnread > 9 ? '9+' : totalUnread}
+            </span>
+          )}
+        </div>
         <span className="hidden lg:block">{item.label}</span>
         {isActive && (
           <motion.div

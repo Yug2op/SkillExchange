@@ -4,6 +4,26 @@ import ChatList from '../../components/chat/ChatList.jsx';
 import ChatWindow from '../../components/chat/ChatWindow.jsx';
 import { searchUsers } from '../../api/UserApi.js';
 import { useMe } from '../../hooks/useMe.js';
+import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Badge } from "@/components/ui/badge";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import {
+  MessageCircle,
+  Loader2,
+  X,
+  ArrowLeft,
+  Edit3,
+  AlertCircle,
+  Search,
+} from 'lucide-react';
 
 const ChatPage = () => {
   const [selectedChatId, setSelectedChatId] = useState(null);
@@ -14,8 +34,7 @@ const ChatPage = () => {
   const [searchResults, setSearchResults] = useState([]);
   const [searchLoading, setSearchLoading] = useState(false);
   const { state, actions } = useChat();
-  const { data: currentUser } = useMe()
-  
+  const { data: currentUser } = useMe();
 
   // Check if mobile view
   useEffect(() => {
@@ -41,7 +60,6 @@ const ChatPage = () => {
   const handleChatSelect = async (chatId) => {
     setSelectedChatId(chatId);
     
-    // Load the messages for this chat
     try {
       await actions.loadChat(chatId);
     } catch (error) {
@@ -69,18 +87,14 @@ const ChatPage = () => {
     try {
       const response = await searchUsers({ q: query, limit: 10 });
       if (response.success) {
-        // Filter out current user and users already in chats
         const filteredUsers = response.data?.users.filter((user) => {
           const isCurrentUser = user?._id === currentUser?.id;
           const alreadyInChat = state.chats.some((chat) =>
             chat.participants.some((p) => p._id === user._id)
-        );
+          );
           return !isCurrentUser && !alreadyInChat;
         });
         setSearchResults(filteredUsers);
-        // console.log(filteredUsers);
-        
-        
       }
     } catch (error) {
       console.error('Error searching users:', error);
@@ -111,9 +125,6 @@ const ChatPage = () => {
       setShowNewChatModal(false);
       setSearchQuery('');
       setSearchResults([]);
-      handleNewChat();
-
-      // console.log(setSearchQuery);
       
       if (isMobile) {
         setShowMobileChat(true);
@@ -134,51 +145,83 @@ const ChatPage = () => {
   // Find selected chat from state
   const selectedChat = state.chats.find((chat) => chat._id === selectedChatId);
 
-  // console.log(selectedChat,showMobileChat,isMobile,showMobileChat,searchQuery,searchResults,searchLoading);
-
   return (
-    <div className="chat-page">
-      <div className="chat-container">
-        {/* Chat List */}
+    <div className="flex flex-col h-screen bg-background">
+      <div className="flex flex-1 overflow-hidden">
+        {/* Chat List Panel */}
         <div
-          className={`chat-list-panel ${isMobile && showMobileChat ? 'hidden' : 'visible'
-            }`}
+          className={`
+            w-full md:w-80 lg:w-96 flex-shrink-0 border-r border-border
+            transition-transform duration-300 ease-in-out
+            ${isMobile && showMobileChat ? '-translate-x-full absolute inset-0 z-10' : 'translate-x-0'}
+            md:relative md:translate-x-0
+          `}
         >
-          <ChatList onChatSelect={handleChatSelect} selectedChatId={selectedChatId} state = {state} actions = {actions} />
+          <ChatList 
+            onChatSelect={handleChatSelect} 
+            selectedChatId={selectedChatId} 
+            state={state} 
+            actions={actions} 
+          />
         </div>
 
-        {/* Chat Window */}
+        {/* Chat Window Panel */}
         <div
-          className={`chat-window-panel ${isMobile && !showMobileChat ? 'hidden' : 'visible'
-            }`}
+          className={`
+            flex-1 flex flex-col
+            transition-transform duration-300 ease-in-out
+            ${isMobile && !showMobileChat ? 'translate-x-full absolute inset-0' : 'translate-x-0'}
+            md:relative md:translate-x-0
+          `}
         >
           {selectedChatId && selectedChat ? (
-            <>
+            <div className="flex flex-col h-full">
               {/* Mobile Back Button */}
               {isMobile && (
-                <button className="mobile-back-btn" onClick={handleBackToChatList}>
-                  ← Back to conversations
-                </button>
+                <div className="flex items-center gap-2 p-3 bg-primary text-primary-foreground md:hidden">
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={handleBackToChatList}
+                    className="text-primary-foreground hover:bg-primary-foreground/20"
+                  >
+                    <ArrowLeft className="w-5 h-5" />
+                  </Button>
+                  <span className="text-sm font-medium">Back to conversations</span>
+                </div>
               )}
 
-              <ChatWindow chatId={selectedChatId} chat={selectedChat} state={state} actions = {actions} />
-            </>
+              <ChatWindow 
+                chatId={selectedChatId} 
+                chat={selectedChat} 
+                state={state} 
+                actions={actions} 
+              />
+            </div>
           ) : (
-            <div className="no-chat-selected">
-              <div className="empty-state">
-                <div className="empty-icon">💬</div>
-                <h3>Select a conversation</h3>
-                <p>Choose a conversation from the list to start messaging</p>
+            <div className="flex items-center justify-center h-full bg-muted/20 p-4">
+              <div className="text-center max-w-md space-y-6">
+                <MessageCircle className="w-16 h-16 sm:w-20 sm:h-20 md:w-24 md:h-24 mx-auto text-muted-foreground/30" />
+                
+                <div className="space-y-2">
+                  <h3 className="text-xl sm:text-2xl font-semibold text-foreground">
+                    Select a conversation
+                  </h3>
+                  <p className="text-sm sm:text-base text-muted-foreground">
+                    Choose a conversation from the list to start messaging
+                  </p>
+                </div>
 
                 {/* Quick Actions */}
-                <div className="quick-actions">
-                  <button
-                    className="quick-action-btn"
+                <div className="flex justify-center pt-4">
+                  <Button
                     onClick={() => setShowNewChatModal(true)}
+                    size="lg"
+                    className="gap-2"
                   >
-                    <span className="action-icon">✏️</span>
-                    <span>Start New Chat</span>
-                  </button>
+                    <Edit3 className="w-4 h-4" />
+                    Start New Chat
+                  </Button>
                 </div>
               </div>
             </div>
@@ -188,552 +231,133 @@ const ChatPage = () => {
 
       {/* Mobile Overlay */}
       {isMobile && showMobileChat && (
-        <div className="mobile-overlay" onClick={handleBackToChatList} />
+        <div 
+          className="fixed inset-0 bg-black/50 z-[5] md:hidden"
+          onClick={handleBackToChatList}
+        />
       )}
 
       {/* Loading Overlay */}
       {state.loading && (
-        <div className="loading-overlay">
-          <div className="loading-spinner"></div>
-          <p>Loading...</p>
+        <div className="fixed inset-0 bg-background/90 backdrop-blur-sm flex flex-col items-center justify-center z-50">
+          <Loader2 className="w-10 h-10 sm:w-12 sm:h-12 animate-spin text-primary mb-4" />
+          <p className="text-sm sm:text-base text-muted-foreground">Loading...</p>
         </div>
       )}
 
       {/* New Chat Modal */}
-      {showNewChatModal && (
-        <div className="modal-overlay" onClick={() => setShowNewChatModal(false)}>
-          <div
-            className="modal-content new-chat-modal"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className="modal-header">
-              <h3>Start New Chat</h3>
-              <button
-                className="modal-close"
-                onClick={() => setShowNewChatModal(false)}
-              >
-                ×
-              </button>
+      <Dialog open={showNewChatModal} onOpenChange={setShowNewChatModal}>
+        <DialogContent className="sm:max-w-[500px] max-h-[85vh] p-0">
+          <DialogHeader className="px-4 sm:px-6 pt-4 sm:pt-6 pb-4 border-b">
+            <DialogTitle className="text-lg sm:text-xl">Start New Chat</DialogTitle>
+          </DialogHeader>
+
+          <div className="px-4 sm:px-6 py-4 space-y-4">
+            {/* Search Input */}
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+              <Input
+                type="text"
+                placeholder="Search users by name, skills, or bio..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="pl-9 h-10 sm:h-11"
+              />
             </div>
 
-            <div className="modal-body">
-              <div className="search-section">
-                <input
-                  type="text"
-                  placeholder="Search users by name, skills, or bio..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)
-                  }
-                  className="search-input"
-                />
-
-                {searchLoading && (
-                  <div className="search-loading">
-                    <div className="loading-spinner small"></div>
-                    <span>Searching...</span>
-                  </div>
-                )}
-
-                {searchResults.length > 0 && (
-                  <div className="search-results">
-                    {searchResults.map((user) => (
-                      <div
-                        key={user._id}
-                        className="user-item"
-                        onClick={() => handleUserSelect(user)}
-                      >
-                        <div className="user-avatar">
-                          {user.profilePic?.url ? (
-                            <img src={user.profilePic.url || `https://ui-avatars.com/api/?name=${user?.name || 'U'}&background=random`} alt={user.name} loading="lazy"/>
-                          ) : (
-                            <div className="avatar-placeholder">
-                              {user.name.charAt(0).toUpperCase()}
-                            </div>
-                          )}
-                        </div>
-                        <div className="user-info">
-                          <div className="user-name">{user.name}</div>
-                          <div className="user-skills">
-                            {user.skillsToTeach?.length > 0 && (
-                              <span className="skill-tag">
-                                Teaches: {user.skillsToTeach.slice(0, 2).map(s => s.skill).join(', ')}
-                              </span>
-                            )}
-                          </div>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                )}
-
-                {searchQuery && !searchLoading && searchResults.length === 0 && (
-                  <div className="no-results">
-                    <p>No users found matching "{searchQuery}"</p>
-                    <p>Try searching with different keywords</p>
-                  </div>
-                )}
+            {/* Search Loading */}
+            {searchLoading && (
+              <div className="flex items-center justify-center py-8">
+                <Loader2 className="w-5 h-5 animate-spin text-primary mr-2" />
+                <span className="text-sm text-muted-foreground">Searching...</span>
               </div>
-            </div>
+            )}
+
+            {/* Search Results */}
+            {searchResults.length > 0 && !searchLoading && (
+              <ScrollArea className="h-[300px] sm:h-[350px] pr-4">
+                <div className="space-y-2">
+                  {searchResults.map((user) => (
+                    <div
+                      key={user._id}
+                      onClick={() => handleUserSelect(user)}
+                      className="flex items-center gap-3 p-3 rounded-lg hover:bg-accent cursor-pointer transition-colors"
+                    >
+                      <Avatar className="w-10 h-10 sm:w-12 sm:h-12 flex-shrink-0">
+                        <AvatarImage 
+                          src={user.profilePic?.url || `https://ui-avatars.com/api/?name=${user?.name || 'U'}&background=random`}
+                          alt={user.name}
+                        />
+                        <AvatarFallback>
+                          {user.name?.charAt(0)?.toUpperCase() || 'U'}
+                        </AvatarFallback>
+                      </Avatar>
+
+                      <div className="flex-1 min-w-0">
+                        <p className="font-medium text-sm sm:text-base text-foreground truncate">
+                          {user.name}
+                        </p>
+                        {user.skillsToTeach?.length > 0 && (
+                          <div className="flex flex-wrap gap-1 mt-1">
+                            <Badge variant="secondary" className="text-[10px] sm:text-xs">
+                              Teaches: {user.skillsToTeach.slice(0, 2).map(s => s.skill).join(', ')}
+                            </Badge>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </ScrollArea>
+            )}
+
+            {/* No Results */}
+            {searchQuery && !searchLoading && searchResults.length === 0 && (
+              <div className="text-center py-12">
+                <Search className="w-12 h-12 mx-auto text-muted-foreground/30 mb-3" />
+                <p className="text-sm font-medium text-foreground mb-1">
+                  No users found matching "{searchQuery}"
+                </p>
+                <p className="text-xs sm:text-sm text-muted-foreground">
+                  Try searching with different keywords
+                </p>
+              </div>
+            )}
+
+            {/* Empty State */}
+            {!searchQuery && searchResults.length === 0 && !searchLoading && (
+              <div className="text-center py-12">
+                <MessageCircle className="w-12 h-12 mx-auto text-muted-foreground/30 mb-3" />
+                <p className="text-sm text-muted-foreground">
+                  Search for users to start a new conversation
+                </p>
+              </div>
+            )}
           </div>
-        </div>
-      )}
+        </DialogContent>
+      </Dialog>
 
       {/* Error Banner */}
       {state.error && (
-        <div className="error-banner">
-          <span className="error-icon">⚠️</span>
-          <span className="error-message">{state.error}</span>
-          <button className="error-close" onClick={actions.clearError}>
-            ✕
-          </button>
+        <div className="fixed top-4 right-4 left-4 sm:left-auto sm:max-w-md z-50 animate-in slide-in-from-top-2">
+          <div className="flex items-start gap-3 p-4 bg-destructive text-destructive-foreground rounded-lg shadow-lg">
+            <AlertCircle className="w-5 h-5 flex-shrink-0 mt-0.5" />
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-medium">Error</p>
+              <p className="text-xs mt-0.5 opacity-90">{state.error}</p>
+            </div>
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={actions.clearError}
+              className="h-6 w-6 flex-shrink-0 hover:bg-destructive-foreground/20"
+            >
+              <X className="w-4 h-4" />
+            </Button>
+          </div>
         </div>
       )}
-      <style jsx>{`
-        .chat-page {
-          height: 100vh;
-          display: flex;
-          flex-direction: column;
-          background: #f8f9fa;
-        }
-
-        .chat-container {
-          display: flex;
-          flex: 1;
-          overflow: hidden;
-        }
-
-        .chat-list-panel {
-          width: 350px;
-          flex-shrink: 0;
-          border-right: 1px solid #e0e0e0;
-          transition: transform 0.3s ease;
-        }
-
-        .chat-window-panel {
-          flex: 1;
-          transition: transform 0.3s ease;
-        }
-
-        /* Mobile responsive */
-        @media (max-width: 768px) {
-          .chat-list-panel {
-            width: 100%;
-            position: fixed;
-            top: 0;
-            left: 0;
-            height: 100%;
-            z-index: 1000;
-            transform: translateX(0);
-          }
-
-          .chat-list-panel.hidden {
-            transform: translateX(-100%);
-          }
-
-          .chat-window-panel {
-            width: 100%;
-            transform: translateX(0);
-          }
-
-          .chat-window-panel.hidden {
-            transform: translateX(100%);
-          }
-        }
-
-        .mobile-back-btn {
-          display: none;
-          background: #007bff;
-          color: white;
-          border: none;
-          padding: 12px 16px;
-          font-size: 14px;
-          font-weight: 500;
-          cursor: pointer;
-          border-radius: 0;
-          width: 100%;
-        }
-
-        @media (max-width: 768px) {
-          .mobile-back-btn {
-            display: block;
-          }
-        }
-
-        .no-chat-selected {
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          height: 100%;
-          background: #f8f9fa;
-        }
-
-        .empty-state {
-          text-align: center;
-          color: #6c757d;
-          max-width: 400px;
-          padding: 40px;
-        }
-
-        .empty-icon {
-          font-size: 80px;
-          margin-bottom: 24px;
-          opacity: 0.5;
-        }
-
-        .empty-state h3 {
-          margin: 0 0 12px 0;
-          font-size: 24px;
-          font-weight: 600;
-          color: #333;
-        }
-
-        .empty-state p {
-          margin: 0 0 32px 0;
-          font-size: 16px;
-          line-height: 1.5;
-        }
-
-        .quick-actions {
-          display: flex;
-          gap: 12px;
-          justify-content: center;
-        }
-
-        .quick-action-btn {
-          display: flex;
-          align-items: center;
-          gap: 8px;
-          background: #007bff;
-          color: white;
-          border: none;
-          padding: 12px 24px;
-          border-radius: 8px;
-          font-size: 14px;
-          font-weight: 500;
-          cursor: pointer;
-          transition: background-color 0.2s;
-        }
-
-        .quick-action-btn:hover {
-          background: #0056b3;
-        }
-
-        .action-icon {
-          font-size: 16px;
-        }
-
-        .mobile-overlay {
-          position: fixed;
-          top: 0;
-          left: 0;
-          right: 0;
-          bottom: 0;
-          background: rgba(0, 0, 0, 0.5);
-          z-index: 999;
-        }
-
-        .loading-overlay {
-          position: fixed;
-          top: 0;
-          left: 0;
-          right: 0;
-          bottom: 0;
-          background: rgba(255, 255, 255, 0.9);
-          display: flex;
-          flex-direction: column;
-          align-items: center;
-          justify-content: center;
-          z-index: 2000;
-          color: #6c757d;
-        }
-
-        .loading-spinner {
-          width: 32px;
-          height: 32px;
-          border: 3px solid #e9ecef;
-          border-top: 3px solid #007bff;
-          border-radius: 50%;
-          animation: spin 1s linear infinite;
-          margin-bottom: 16px;
-        }
-
-        @keyframes spin {
-          0% { transform: rotate(0deg); }
-          100% { transform: rotate(360deg); }
-        }
-
-        .error-banner {
-          position: fixed;
-          top: 20px;
-          right: 20px;
-          background: #dc3545;
-          color: white;
-          padding: 12px 16px;
-          border-radius: 8px;
-          display: flex;
-          align-items: center;
-          gap: 8px;
-          box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-          z-index: 2000;
-          max-width: 400px;
-        }
-
-        .error-icon {
-          font-size: 16px;
-        }
-
-        .error-message {
-          flex: 1;
-          font-size: 14px;
-        }
-
-        .error-close {
-          background: none;
-          border: none;
-          color: white;
-          cursor: pointer;
-          font-size: 16px;
-          padding: 0;
-          line-height: 1;
-        }
-
-        .error-close:hover {
-          opacity: 0.8;
-        }
-
-        /* Responsive adjustments */
-        @media (max-width: 768px) {
-          .chat-list-panel {
-            width: 100%;
-          }
-
-          .error-banner {
-            top: 10px;
-            right: 10px;
-            left: 10px;
-            max-width: none;
-          }
-
-          .empty-state {
-            padding: 20px;
-          }
-
-          .empty-icon {
-            font-size: 60px;
-            margin-bottom: 16px;
-          }
-
-          .empty-state h3 {
-            font-size: 20px;
-          }
-
-          .empty-state p {
-            font-size: 14px;
-          }
-        }
-
-        /* Modal Styles */
-  .modal-overlay {
-    position: fixed;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background: rgba(0, 0, 0, 0.5);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    z-index: 1000;
-  }
-
-  .modal-content {
-    background: white;
-    border-radius: 12px;
-    max-width: 500px;
-    width: 90%;
-    max-height: 80vh;
-    overflow: hidden;
-    box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
-  }
-
-  .modal-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 20px 24px;
-    border-bottom: 1px solid #e5e7eb;
-  }
-
-  .modal-header h3 {
-    margin: 0;
-    font-size: 18px;
-    font-weight: 600;
-  }
-
-  .modal-close {
-    background: none;
-    border: none;
-    font-size: 24px;
-    cursor: pointer;
-    color: #6b7280;
-    padding: 0;
-    width: 32px;
-    height: 32px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    border-radius: 4px;
-    transition: background-color 0.2s;
-  }
-
-  .modal-close:hover {
-    background: #f3f4f6;
-  }
-
-  .modal-body {
-    padding: 24px;
-  }
-
-  .search-input {
-    width: 100%;
-    padding: 12px 16px;
-    border: 2px solid #e5e7eb;
-    border-radius: 8px;
-    font-size: 14px;
-    outline: none;
-    transition: border-color 0.2s;
-  }
-
-  .search-input:focus {
-    border-color: #3b82f6;
-  }
-
-  .search-loading {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    padding: 20px;
-    color: #6b7280;
-  }
-
-  .search-loading .loading-spinner.small {
-    width: 16px;
-    height: 16px;
-    margin-right: 8px;
-  }
-
-  .search-results {
-    margin-top: 16px;
-    max-height: 300px;
-    overflow-y: auto;
-  }
-
-  .user-item {
-    display: flex;
-    align-items: center;
-    padding: 12px 16px;
-    cursor: pointer;
-    border-radius: 8px;
-    transition: background-color 0.2s;
-    margin-bottom: 4px;
-  }
-
-  .user-item:hover {
-    background: #f3f4f6;
-  }
-
-  .user-avatar {
-    width: 40px;
-    height: 40px;
-    margin-right: 12px;
-    flex-shrink: 0;
-  }
-
-  .user-avatar img {
-    width: 100%;
-    height: 100%;
-    border-radius: 50%;
-    object-fit: cover;
-  }
-
-  .avatar-placeholder {
-    width: 100%;
-    height: 100%;
-    border-radius: 50%;
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    color: white;
-    font-weight: 600;
-    font-size: 16px;
-  }
-
-  .user-info {
-    flex: 1;
-    min-width: 0;
-  }
-
-  .user-name {
-    font-weight: 500;
-    color: #1f2937;
-    margin-bottom: 2px;
-  }
-
-  .user-skills {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 4px;
-  }
-
-  .skill-tag {
-    font-size: 12px;
-    color: #6b7280;
-    background: #f3f4f6;
-    padding: 2px 6px;
-    border-radius: 4px;
-  }
-
-  .no-results {
-    text-align: center;
-    padding: 40px 20px;
-    color: #6b7280;
-  }
-
-  .no-results p {
-    margin: 0 0 8px 0;
-  }
-
-  /* Mobile New Chat Button */
-  .mobile-new-chat {
-    padding: 16px;
-    border-top: 1px solid #e5e7eb;
-    background: white;
-  }
-
-  .mobile-new-chat-btn {
-    width: 100%;
-    background: #3b82f6;
-    color: white;
-    border: none;
-    padding: 12px;
-    border-radius: 8px;
-    font-size: 14px;
-    font-weight: 500;
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 8px;
-  }
-
-  .mobile-new-chat-btn:hover {
-    background: #2563eb;
-  }
-      `}</style>
-
     </div>
-
   );
 };
 
