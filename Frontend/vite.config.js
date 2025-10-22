@@ -29,7 +29,15 @@ export default defineConfig({
     },
     // Optimize chunk size warnings
     chunkSizeWarningLimit: 1000,
-    // Enable source maps for production debugging
-    sourcemap: true
+    // Disable source maps in production for better performance
+    sourcemap: false,
+    // Optimize for production
+    minify: 'terser',
+    terserOptions: {
+      compress: {
+        drop_console: true,
+        drop_debugger: true
+      }
+    }
   }
 });

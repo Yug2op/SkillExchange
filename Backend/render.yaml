@@ -1,0 +1,24 @@
+# Render deployment configuration for SkillExchange Backend
+
+# Build Command
+npm install
+
+# Start Command
+npm start
+
+# Environment Variables (set these in Render dashboard)
+# NODE_ENV=production
+# PORT=10000
+# MONGODB_URI=mongodb+srv://username:password@cluster.mongodb.net/skillexchange
+# JWT_SECRET=your-super-secret-jwt-key-for-production
+# JWT_EXPIRE=7d
+# EMAIL_HOST=smtp.gmail.com
+# EMAIL_PORT=587
+# EMAIL_USERNAME=your-email@gmail.com
+# EMAIL_PASSWORD=your-app-password
+# EMAIL_FROM=noreply@skillexchange.com
+# CLOUDINARY_CLOUD_NAME=your-cloud-name
+# CLOUDINARY_API_KEY=your-api-key
+# CLOUDINARY_API_SECRET=your-api-secret
+# CLIENT_URL=https://your-frontend-domain.vercel.app
+# OTP_EXPIRE_MINUTES=10
