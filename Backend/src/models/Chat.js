@@ -115,22 +115,16 @@
     return this.messages.filter(msg => !msg.read).length;
   });
 
-  // Instance method to add message
-chatSchema.methods.addMessage = async function(userId, text, messageType = 'text', fileData = null) {
-  const msg = { sender: userId, text, messageType, fileData, read: false, timestamp: new Date() };
-  this.messages.push(msg);
-  this.lastMessage = text
-  this.lastMessageAt = msg.timestamp;
-  await this.save();
-  return msg;
-};
-
   // Method to mark messages as read
   chatSchema.methods.markMessagesAsRead = function(userId) {
     let hasChanges = false;
     
     this.messages.forEach(message => {
-      if (message.sender.toString() !== userId.toString() && !message.read) {
+      // Handle both populated (object with _id) and unpopulated (ObjectId) cases
+      const senderId = message.sender?._id ? message.sender._id.toString() : message.sender?.toString();
+      // console.log(senderId)
+      
+      if (senderId && senderId !== userId.toString() && !message.read) {
         message.read = true;
         hasChanges = true;
       }
@@ -142,6 +136,7 @@ chatSchema.methods.addMessage = async function(userId, text, messageType = 'text
     
     return Promise.resolve(this);
   };
+  
 
   // Static method to find or create a chat between two users
   chatSchema.statics.findOrCreateChat = async function(participant1, participant2, exchangeId = null) {

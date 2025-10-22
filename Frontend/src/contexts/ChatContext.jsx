@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useReducer, useEffect, useRef, useCallback } from 'react';
+import React, { createContext, useContext, useReducer, useEffect, useRef, useCallback, useMemo } from 'react';
 import chatApi from '../api/ChatApi.js';
 import socketService from '../../lib/socket.js';
 import { useMe } from '../hooks/useMe.js';
@@ -28,13 +28,10 @@ const initialState = {
   hasMoreChats: true,
   unreadCounts: {},
   showChatList: true,
-  typingUsers: new Set(),
+  typingUsers: new Map(),
   error: null,
   socketConnected: false
 };
-
-// console.log("Hello",initialState.socketConnected);
-
 
 const chatReducer = (state, action) => {
   switch (action.type) {
@@ -59,9 +56,38 @@ const chatReducer = (state, action) => {
     case 'SET_ACTIVE_CHAT':
       return { ...state, activeChat: action.payload, messages: action.payload?.messages || [] };
     case 'ADD_MESSAGE':
-      return state.activeChat && state.activeChat._id === action.payload.chatId
-        ? { ...state, messages: [...state.messages, action.payload.message] }
-        : state;
+      if (state.activeChat && state.activeChat._id === action.payload.chatId) {
+        const newMessage = action.payload.message;
+        const targetChatId = action.payload.chatId;
+
+        // Check if message already exists (prevent duplicates)
+        const messageExists = state.messages.some(msg => {
+          if (msg._id && newMessage._id && msg._id === newMessage._id) {
+            return true;
+          }
+          if (msg.text === newMessage.text &&
+            Math.abs(new Date(msg.timestamp) - new Date(newMessage.timestamp)) < 1000) {
+            return true;
+          }
+          return false;
+        });
+
+        if (messageExists) {
+          return state;
+        }
+
+        const updatedMessages = [...state.messages, newMessage];
+
+        return {
+          ...state,
+          messages: updatedMessages,
+          activeChat: state.activeChat && state.activeChat._id === targetChatId ? {
+            ...state.activeChat,
+            messages: updatedMessages,
+          } : state.activeChat
+        };
+      }
+      return state;
     case 'UPDATE_MESSAGE':
       return {
         ...state,
@@ -83,11 +109,21 @@ const chatReducer = (state, action) => {
     case 'SET_SEARCH_QUERY': return { ...state, searchQuery: action.payload };
     case 'SET_SHOW_CHAT_LIST': return { ...state, showChatList: action.payload };
     case 'ADD_TYPING_USER':
-      return { ...state, typingUsers: new Set([...state.typingUsers, action.payload]) };
+      const currentTyping = state.typingUsers.get(action.payload.chatId) || new Set();
+      currentTyping.add(action.payload.userId);
+      return {
+        ...state,
+        typingUsers: new Map(state.typingUsers.set(action.payload.chatId, currentTyping))
+      };
     case 'REMOVE_TYPING_USER':
-      const newTyping = new Set(state.typingUsers);
-      newTyping.delete(action.payload);
-      return { ...state, typingUsers: newTyping };
+      const chatTyping = state.typingUsers.get(action.payload.chatId);
+      if (chatTyping) {
+        chatTyping.delete(action.payload.userId);
+        if (chatTyping.size === 0) {
+          state.typingUsers.delete(action.payload.chatId);
+        }
+      }
+      return { ...state, typingUsers: new Map(state.typingUsers) };
     case 'SET_SOCKET_CONNECTED': return { ...state, socketConnected: action.payload };
     case 'SET_ERROR': return { ...state, error: action.payload };
     case 'CLEAR_ERROR': return { ...state, error: null };
@@ -97,22 +133,21 @@ const chatReducer = (state, action) => {
 
 export const ChatProvider = ({ children }) => {
   const [state, dispatch] = useReducer(chatReducer, initialState);
+  const lastLoadedChatRef = useRef({});
+  const CACHE_DURATION = 3000;
   const { data: currentUser } = useMe();
   const typingTimeoutRef = useRef({});
   const listenersSetupRef = useRef(false);
   const stateRef = useRef(state);
 
-
-  // keep ref updated to avoid stale closures
+  // Keep ref updated to avoid stale closures
   useEffect(() => { stateRef.current = state; }, [state]);
 
   // ---------------- SOCKET SETUP ----------------
   useEffect(() => {
-
     const token = getTokenFromStorage();
 
     if (!token) {
-      console.log("Auth token not found in storage");
       listenersSetupRef.current = false;
       return;
     }
@@ -123,11 +158,7 @@ export const ChatProvider = ({ children }) => {
 
     const initSocket = async () => {
       try {
-        console.log('🔌 Initializing socket connection...');
-
-        // Check if already connected first
         if (socketService.isConnected) {
-          console.log('🔗 Socket already connected, reusing...');
           dispatch({ type: 'SET_SOCKET_CONNECTED', payload: true });
           socketService.setOnline();
           setupListeners();
@@ -135,20 +166,12 @@ export const ChatProvider = ({ children }) => {
           return;
         }
 
-        // Setup listeners BEFORE connecting
         setupListeners();
-
-        // Connect if not already connected
         await socketService.connect();
-
-        console.log('✅ Socket connected, updating state...');
         dispatch({ type: 'SET_SOCKET_CONNECTED', payload: true });
         listenersSetupRef.current = true;
         socketService.setOnline();
-
-        // Load initial data
-        await loadChats(); // This will also load unread counts 
-
+        await loadChats();
       } catch (err) {
         console.error('❌ Socket init failed:', err);
         dispatch({ type: 'SET_SOCKET_CONNECTED', payload: false });
@@ -158,24 +181,23 @@ export const ChatProvider = ({ children }) => {
 
     initSocket();
 
-    // Cleanup function
     return () => {
-      console.log('🧹 Cleaning up socket connection...');
       listenersSetupRef.current = false;
-
-      // Clean up all socket service listeners
       socketService.off('connect');
       socketService.off('disconnect');
       socketService.off('new-message');
       socketService.off('user-typing');
       socketService.off('user-stop-typing');
       socketService.off('user-status');
+      socketService.off('messages-read');
+      socketService.off('join-chat');
+      socketService.off('message-notification');
+      socketService.off('chat-loaded');
+      socketService.off('error');
 
-      // Clear all typing timeouts
       Object.values(typingTimeoutRef.current).forEach(clearTimeout);
       typingTimeoutRef.current = {};
 
-      // Disconnect socket
       socketService.disconnect();
       dispatch({ type: 'SET_SOCKET_CONNECTED', payload: false });
     };
@@ -183,110 +205,128 @@ export const ChatProvider = ({ children }) => {
 
   // ---------------- LISTENERS (IDEMPOTENT) ----------------
   const setupListeners = useCallback(() => {
-    // Make idempotent: always remove listeners before adding
     socketService.off('connect');
     socketService.off('disconnect');
     socketService.off('new-message');
     socketService.off('user-typing');
     socketService.off('user-stop-typing');
     socketService.off('user-status');
+    socketService.off('messages-read');
+    socketService.off('join-chat');
+    socketService.off('message-notification');
+    socketService.off('chat-loaded');
+    socketService.off('error');
 
-    // Use socketService.on() consistently for all events
     socketService.on('connect', () => {
-      console.log('🔗 Socket service connected');
       dispatch({ type: 'SET_SOCKET_CONNECTED', payload: true });
       socketService.setOnline();
     });
 
     socketService.on('disconnect', () => {
-      console.log('🔌 Socket service disconnected');
       dispatch({ type: 'SET_SOCKET_CONNECTED', payload: false });
     });
 
     socketService.on('new-message', ({ chatId, message }) => {
-      console.log('📨 [FRONTEND] RECEIVED new-message event:', { chatId, message: message.text, sender: message.sender });
-
-      // Use stateRef to access latest state (prevents stale closures)
       const currentState = stateRef.current;
+      const messageSenderId = typeof message.sender === 'object' ? message.sender._id : message.sender;
+      const currentUserId = currentUser?.id;
+      const isOwnMessage = messageSenderId === currentUserId;
 
-      console.log('🔄 [FRONTEND] Processing new message in reducer...');
-      dispatch({ type: 'ADD_MESSAGE', payload: { chatId, message } });
-      console.log('✅ [FRONTEND] Message added to state');
+      if (currentState.activeChat && currentState.activeChat._id === chatId) {
+        if (isOwnMessage) {
+          const tempMsgIndex = currentState.messages.findIndex(m =>
+            m.temp &&
+            m.text === message.text &&
+            Math.abs(new Date(m.timestamp) - new Date(message.timestamp)) < 5000
+          );
 
-      // Update chat preview
-      console.log('🔄 [FRONTEND] Updating chat preview...');
+          if (tempMsgIndex !== -1) {
+            const updatedMessages = [...currentState.messages];
+            updatedMessages[tempMsgIndex] = {
+              ...message,
+              _id: message._id || message.id,
+              temp: false
+            };
+
+            dispatch({
+              type: 'SET_ACTIVE_CHAT',
+              payload: {
+                ...currentState.activeChat,
+                messages: updatedMessages
+              }
+            });
+          } else {
+            const messageExists = currentState.messages.some(m =>
+              m._id === message._id ||
+              (m.text === message.text && !m.temp)
+            );
+
+            if (!messageExists) {
+              dispatch({ type: 'ADD_MESSAGE', payload: { chatId, message } });
+            }
+          }
+        } else {
+          const messageExists = currentState.messages.some(m => m._id === message._id);
+
+          if (!messageExists) {
+            dispatch({ type: 'ADD_MESSAGE', payload: { chatId, message } });
+          }
+        }
+      }
+
       dispatch({
         type: 'UPDATE_CHAT',
-        payload: { chatId, updates: { lastMessage: message.text, lastMessageAt: message.timestamp } }
+        payload: {
+          chatId,
+          updates: {
+            lastMessage: message.text,
+            lastMessageAt: message.timestamp || new Date(),
+            lastMessageRead: currentState.activeChat && currentState.activeChat._id === chatId
+          }
+        }
       });
-      console.log('✅ [FRONTEND] Chat preview updated');
 
-      // Update unread count if not active chat
-      // console.log("CurrentState",currentState)
       const active = currentState.activeChat;
-      if (!active || active._id !== chatId) {
+      if (!isOwnMessage && (!active || active._id !== chatId)) {
         const prev = currentState.unreadCounts[chatId] || 0;
-        console.log(`🔢 [FRONTEND] Updating unread count: ${prev} → ${prev + 1}`);
-        dispatch({ type: 'UPDATE_UNREAD_COUNT', payload: { chatId, count: prev + 1 } });
-        console.log('✅ [FRONTEND] Unread count updated');
-      } else {
-        console.log('👁️ [FRONTEND] Message received in active chat, no unread update needed');
+        dispatch({
+          type: 'UPDATE_UNREAD_COUNT',
+          payload: { chatId, count: prev + 1 }
+        });
       }
     });
 
-    socketService.on('user-typing', ({ userId }) => {
-      console.log('⌨️ [FRONTEND] RECEIVED user-typing event for user:', userId);
-      console.log('🔄 [FRONTEND] Adding user to typing list...');
-      dispatch({ type: 'ADD_TYPING_USER', payload: userId });
-      console.log('✅ [FRONTEND] User added to typing list');
+    socketService.on('user-typing', ({ userId, chatId }) => {
+      dispatch({ type: 'ADD_TYPING_USER', payload: {userId, chatId} });
 
-      // Clear existing timeout for this user
       if (typingTimeoutRef.current[userId]) {
         clearTimeout(typingTimeoutRef.current[userId]);
       }
 
-      // Set new timeout
       typingTimeoutRef.current[userId] = setTimeout(() => {
-        console.log('⏰ [FRONTEND] Typing timeout reached for user:', userId);
         dispatch({ type: 'REMOVE_TYPING_USER', payload: userId });
         delete typingTimeoutRef.current[userId];
-        console.log('✅ [FRONTEND] User removed from typing list (timeout)');
       }, 3000);
     });
 
     socketService.on('user-stop-typing', ({ userId }) => {
-      console.log('🛑 [FRONTEND] RECEIVED user-stop-typing event for user:', userId);
-      console.log('🔄 [FRONTEND] Removing user from typing list...');
       dispatch({ type: 'REMOVE_TYPING_USER', payload: userId });
-      console.log('✅ [FRONTEND] User removed from typing list');
 
-      // Clear timeout for this user
       if (typingTimeoutRef.current[userId]) {
         clearTimeout(typingTimeoutRef.current[userId]);
         delete typingTimeoutRef.current[userId];
-        console.log('🧹 [FRONTEND] Typing timeout cleared');
       }
     });
 
     socketService.on('user-status', ({ userId, isOnline, lastActive }) => {
-      console.log('👤 [FRONTEND] RECEIVED user-status event:', {
-        userId,
-        isOnline,
-        lastActive: lastActive ? new Date(lastActive).toLocaleTimeString() : 'none'
-      });
-
-      // Use stateRef to access latest state
       const currentState = stateRef.current;
 
-      console.log('🔄 [FRONTEND] Updating user status in chats...');
-      // Update user status in all chats that include this user
       currentState.chats.forEach(chat => {
         const updatedParticipants = chat.participants.map(p =>
           p._id === userId ? { ...p, isOnline, lastActive } : p
         );
 
         if (updatedParticipants.some(p => p._id === userId)) {
-          console.log(`📝 [FRONTEND] Updated status for user ${userId} in chat ${chat._id}`);
           dispatch({
             type: 'UPDATE_CHAT',
             payload: {
@@ -296,98 +336,240 @@ export const ChatProvider = ({ children }) => {
           });
         }
       });
-      console.log('✅ [FRONTEND] User status updates completed');
     });
-    // Listen for message read status updates
-    socketService.on('messages-read', ({ chatId }) => {
-      console.log('📖 [FRONTEND] RECEIVED messages-read event for chat:', chatId);
 
-      // Update messages in the active chat to read=true
+    socketService.on('messages-read', ({ chatId }) => {
       const currentState = stateRef.current;
 
-      if (currentState.activeChat && currentState.activeChat._id === chatId) {
-        console.log('📝 [FRONTEND] Updating active chat messages to read=true');
+      // Update both activeChat and global messages state
+      const updateReadStatus = (messages) => {
+        return messages.map(msg => {
+          // Handle both socket (object) and API (populated) sender formats
+          const senderId = typeof msg.sender === 'object' ? msg.sender._id : msg.sender;
+          if (senderId && currentUser?.id && senderId !== currentUser.id && !msg.read) {
+            return { ...msg, read: true };
+          }
+          return msg;
+        });
+      };
+
+      if (currentState?.activeChat && currentState?.activeChat._id === chatId) {
         dispatch({
           type: 'SET_ACTIVE_CHAT',
           payload: {
             ...currentState.activeChat,
-            messages: currentState.activeChat.messages.map(msg => ({ ...msg, read: true }))
+            messages: updateReadStatus(currentState.activeChat.messages)
           }
         });
       }
 
-      // Reset unread count for this chat
-      console.log('🔢 [FRONTEND] Resetting unread count to 0 for chat:', chatId);
+      // Also update global messages state for consistency
+      if (currentState?.messages && currentState?.messages.length > 0) {
+        dispatch({
+          type: 'UPDATE_MESSAGES',
+          payload: updateReadStatus(currentState.messages)
+        });
+      }
       dispatch({
         type: 'UPDATE_UNREAD_COUNT',
         payload: { chatId, count: 0 }
       });
-
-      console.log('✅ [FRONTEND] Messages marked as read and unread count reset');
     });
 
-  }, []);
+    socketService.on('message-notification', ({ chatId, senderId, text }) => {
+      const currentState = stateRef.current;
+      const prev = currentState.unreadCounts[chatId] || 0;
+      dispatch({
+        type: 'UPDATE_UNREAD_COUNT',
+        payload: { chatId, count: prev + 1 }
+      });
+    });
 
-  // ---------------- API FUNCTIONS ----------------
-  const loadChats = async () => {
+    socketService.on('error', ({ message }) => {
+      console.error('❌ [FRONTEND] RECEIVED socket error:', message);
+      dispatch({ type: 'SET_ERROR', payload: message });
+    });
+  }, [currentUser]);
+
+  // ---------------- API FUNCTIONS (Memoized) ----------------
+
+  const loadChats = useCallback(async (page = 1, limit = 20) => {
     try {
       dispatch({ type: 'SET_LOADING_CHATS', payload: true });
+
+      const currentState = stateRef.current;
       const res = await chatApi.getChats();
+
       if (res.success) {
-        dispatch({ type: 'SET_CHATS', payload: res.data.chats || [] });
-        // Load unread counts after loading chats
+        const chats = res.data.chats || [];
+
+        const mergedChats = chats.map(apiChat => {
+          const existingChat = currentState.chats.find(c => c._id === apiChat._id);
+
+          if (existingChat) {
+            return {
+              ...apiChat,
+              messages: existingChat.messages && existingChat.messages.length > 0
+                ? existingChat.messages
+                : apiChat.messages || [],
+              participants: existingChat.participants || apiChat.participants,
+              lastMessage: existingChat.lastMessageAt > apiChat.lastMessageAt
+                ? existingChat.lastMessage
+                : apiChat.lastMessage,
+              lastMessageAt: existingChat.lastMessageAt > apiChat.lastMessageAt
+                ? existingChat.lastMessageAt
+                : apiChat.lastMessageAt
+            };
+          }
+
+          return apiChat;
+        });
+
+        dispatch({ type: 'SET_CHATS', payload: mergedChats });
+
+        if (stateRef.current.socketConnected) {
+          const activeChat = currentState.activeChat;
+          if (activeChat) {
+            socketService.joinChat(activeChat._id);
+          }
+        }
+
         await loadUnreadCounts();
       }
     } catch (err) {
+      console.error('❌ [FRONTEND] Error loading chats:', err);
       dispatch({ type: 'SET_ERROR', payload: err.message });
     } finally {
       dispatch({ type: 'SET_LOADING_CHATS', payload: false });
     }
-  };
+  }, [currentUser?.id]);
 
-  const loadUnreadCounts = async () => {
+  const loadUnreadCounts = useCallback(async () => {
     try {
-      console.log('📊 [FRONTEND] Loading unread counts...');
       const res = await chatApi.getUnreadCount();
       if (res.success) {
-        // Convert array to object for easy lookup
         const unreadCountsObj = {};
         res.data.forEach(item => {
           unreadCountsObj[item._id] = item.count;
         });
-        console.log('📊 [FRONTEND] Unread counts loaded:', unreadCountsObj);
         dispatch({ type: 'SET_UNREAD_COUNTS', payload: unreadCountsObj });
       }
     } catch (err) {
       console.error('❌ [FRONTEND] Failed to load unread counts:', err);
     }
-  };
+  }, []);
 
-  const loadChat = async (chatId) => {
+  const loadChat = useCallback(async (chatId, forceReload = false) => {
     try {
-      dispatch({ type: 'SET_LOADING', payload: true });
-      const res = await chatApi.getChatById(chatId);
-      if (res.success) {
-        dispatch({ type: 'SET_ACTIVE_CHAT', payload: res.data.chat });
-        // Join the chat room via socket
+      const now = Date.now();
+      const lastLoaded = lastLoadedChatRef.current[chatId];
+
+      if (!forceReload && lastLoaded && (now - lastLoaded) < CACHE_DURATION) {
         if (stateRef.current.socketConnected) {
           socketService.joinChat(chatId);
         }
-        // Mark messages as read when chat loads
         await markMessagesAsRead(chatId);
+        return;
+      }
+
+      dispatch({ type: 'SET_LOADING', payload: true });
+
+      const currentState = stateRef.current;
+
+      // Handle both cases: prioritize activeChat.messages, fallback to global messages
+      const existingMessages = currentState.activeChat?._id === chatId
+        ? (currentState.activeChat.messages || currentState.messages || [])
+        : (currentState.messages || []);
+
+
+      const res = await chatApi.getChatById(chatId);
+
+      if (res.success) {
+        const chatData = res.data.chat;
+        const apiMessages = chatData.messages || [];
+
+        let mergedMessages = [];
+
+        if (existingMessages.length > 0) {
+          const apiMessageMap = new Map();
+          apiMessages.forEach(msg => {
+            if (msg._id) {
+              apiMessageMap.set(msg._id.toString(), msg);
+            }
+          });
+
+          const usedApiMessageIds = new Set();
+
+          mergedMessages = existingMessages.map(existingMsg => {
+            if (existingMsg.temp) {
+              return null;
+            }
+
+            const msgId = existingMsg._id?.toString();
+            if (msgId && apiMessageMap.has(msgId)) {
+              usedApiMessageIds.add(msgId);
+              return apiMessageMap.get(msgId);
+            }
+
+            return existingMsg;
+          }).filter(msg => msg !== null);
+
+          apiMessages.forEach(apiMsg => {
+            const apiMsgId = apiMsg._id?.toString();
+            if (apiMsgId && !usedApiMessageIds.has(apiMsgId)) {
+              const alreadyExists = mergedMessages.some(m =>
+                m._id?.toString() === apiMsgId ||
+                (m.text === apiMsg.text &&
+                  Math.abs(new Date(m.timestamp) - new Date(apiMsg.timestamp)) < 1000)
+              );
+
+              if (!alreadyExists) {
+                mergedMessages.push(apiMsg);
+              }
+            }
+          });
+
+          mergedMessages.sort((a, b) =>
+            new Date(a.timestamp) - new Date(b.timestamp)
+          );
+        } else {
+          mergedMessages = apiMessages;
+        }
+
+        const mergedChat = {
+          ...chatData,
+          messages: mergedMessages
+        };
+
+        dispatch({ type: 'SET_ACTIVE_CHAT', payload: mergedChat });
+
+        if (stateRef.current.socketConnected) {
+          socketService.joinChat(chatId);
+        }
+
+        await markMessagesAsRead(chatId);
+        dispatch({
+          type: 'UPDATE_CHAT',
+          payload: {
+            chatId,
+            updates: {
+              lastMessageRead: true
+            }
+          }
+        });
       }
     } catch (err) {
+      console.error('❌ [FRONTEND] Error loading chat:', err);
       dispatch({ type: 'SET_ERROR', payload: err.message });
     } finally {
       dispatch({ type: 'SET_LOADING', payload: false });
     }
-  };
+  }, [currentUser?.id]);
 
-  const createOrGetChat = async (participantId, exchangeId = null) => {
+  const createOrGetChat = useCallback(async (participantId, exchangeId = null) => {
     try {
       const res = await chatApi.createOrGetChat(participantId, exchangeId);
       if (res.success) {
-        // Add the new chat to the chats list if it doesn't exist
         dispatch({ type: 'ADD_CHAT', payload: res.data.chat });
         return res.data.chat;
       }
@@ -395,9 +577,9 @@ export const ChatProvider = ({ children }) => {
       dispatch({ type: 'SET_ERROR', payload: err.message });
       throw err;
     }
-  };
+  }, [currentUser?.id]);
 
-  const searchChats = async (query) => {
+  const searchChats = useCallback(async (query) => {
     try {
       const res = await chatApi.searchChats(query);
       return res;
@@ -405,35 +587,29 @@ export const ChatProvider = ({ children }) => {
       dispatch({ type: 'SET_ERROR', payload: err.message });
       throw err;
     }
-  };
+  }, []);
 
-  const clearError = () => {
+  const clearError = useCallback(() => {
     dispatch({ type: 'CLEAR_ERROR' });
-  };
+  }, []);
 
-  const joinChat = (chatId) => {
-    console.log('🔄 [FRONTEND] Attempting to join chat:', chatId, 'Socket connected:', stateRef.current.socketConnected);
+  const joinChat = useCallback((chatId) => {
     if (stateRef.current.socketConnected) {
-      console.log('📡 [FRONTEND] EMITTING join-chat event for:', chatId);
       socketService.joinChat(chatId);
-      console.log('✅ [FRONTEND] join-chat event emitted');
-
+      markMessagesAsRead(chatId);
     } else {
-      console.log('📋 [FRONTEND] Storing pending chat join:', chatId);
       dispatch({ type: 'SET_PENDING_CHAT_JOIN', payload: chatId });
     }
-  };
+  }, [currentUser?.id]);
 
-  const leaveChat = (chatId) => {
+  const leaveChat = useCallback((chatId) => {
     if (stateRef.current.socketConnected) {
       socketService.leaveChat(chatId);
     }
-  };
+  }, []);
 
-  const sendMessage = async (chatId, text, messageType = 'text', fileData = null) => {
+  const sendMessage = useCallback(async (chatId, text, messageType = 'text', fileData = null) => {
     try {
-      console.log('📤 [FRONTEND] SENDING message:', { chatId, text: text.substring(0, 50) + '...', messageType });
-
       dispatch({ type: 'SET_SENDING_MESSAGE', payload: true });
       const tempMsg = {
         _id: `temp_${Date.now()}`,
@@ -446,38 +622,27 @@ export const ChatProvider = ({ children }) => {
       dispatch({ type: 'ADD_MESSAGE', payload: { chatId, message: tempMsg } });
 
       if (stateRef.current.socketConnected) {
-        // Ensure user is in the chat room before sending
-        console.log('🔗 [FRONTEND] Ensuring user is in chat room:', chatId);
         socketService.joinChat(chatId);
+        socketService.sendMessage(chatId, text, messageType, fileData, currentUser?.id);
 
-        console.log('📡 [FRONTEND] EMITTING send-message via socket');
-        socketService.sendMessage(chatId, text, messageType, fileData);
-        console.log('✅ [FRONTEND] send-message event emitted');
-
-        // Update chat preview immediately (since we won't receive our own message via new-message event)
-        console.log('🔄 [FRONTEND] Updating chat preview for sent message...');
         dispatch({
           type: 'UPDATE_CHAT',
           payload: {
             chatId,
             updates: {
               lastMessage: text,
-              lastMessageAt: new Date()
+              lastMessageAt: new Date(),
+              lastMessageRead: false
             }
           }
         });
-        console.log('✅ [FRONTEND] Chat preview updated for sent message');
-
       } else {
-        console.log('🌐 [FRONTEND] Sending message via HTTP (socket not connected)');
         const res = await chatApi.sendMessage(chatId, text, messageType, fileData);
         if (res.success) {
-          console.log('✅ [FRONTEND] Message sent via HTTP, updating UI');
           dispatch({
             type: 'UPDATE_MESSAGE',
             payload: { messageId: tempMsg._id, updates: res.data.message }
           });
-          // Update chat preview when sending via HTTP
           dispatch({
             type: 'UPDATE_CHAT',
             payload: {
@@ -496,84 +661,127 @@ export const ChatProvider = ({ children }) => {
     } finally {
       dispatch({ type: 'SET_SENDING_MESSAGE', payload: false });
     }
-  };
+  }, [currentUser?.id]);
 
-  const startTyping = (chatId) => {
-    console.log('⌨️ [FRONTEND] EMITTING typing start for chat:', chatId);
+  const startTyping = useCallback((chatId) => {
     if (stateRef.current.socketConnected) {
-      // Ensure user is in the chat room before typing
       socketService.joinChat(chatId);
       socketService.startTyping(chatId);
-      console.log('✅ [FRONTEND] typing event emitted');
     }
-  };
+  }, []);
 
-  const stopTyping = (chatId) => {
-    console.log('🛑 [FRONTEND] EMITTING typing stop for chat:', chatId);
+  const stopTyping = useCallback((chatId) => {
     if (stateRef.current.socketConnected) {
-      // Ensure user is in the chat room before stopping typing
       socketService.joinChat(chatId);
       socketService.stopTyping(chatId);
-      console.log('✅ [FRONTEND] stop-typing event emitted');
     }
-  };
+  }, []);
 
-  const markMessagesAsRead = async (chatId) => {
+  const markMessagesAsRead = useCallback(async (chatId) => {
     try {
-      if (stateRef.current.socketConnected) {
-        console.log('📖 [FRONTEND] EMITTING mark-as-read for chat:', chatId);
-        socketService.markMessagesAsRead(chatId);
-        console.log('✅ [FRONTEND] mark-as-read event emitted');
-
-        // Immediately update local state (optimistic update)
-        console.log('🔄 [FRONTEND] Immediately updating local read status...');
-
-        // Update active chat messages to read=true
-        const currentState = stateRef.current;
-        if (currentState.activeChat && currentState.activeChat._id === chatId) {
-          dispatch({
-            type: 'SET_ACTIVE_CHAT',
-            payload: {
-              ...currentState.activeChat,
-              messages: currentState.activeChat.messages.map(msg => ({ ...msg, read: true }))
-            }
-          });
-        }
-
-        // Reset unread count immediately
-        dispatch({
-          type: 'UPDATE_UNREAD_COUNT',
-          payload: { chatId, count: 0 }
-        });
-
-        console.log('✅ [FRONTEND] Local state updated optimistically');
-
-      } else {
-        console.log('🌐 [FRONTEND] Marking messages as read via HTTP');
-        await chatApi.markMessagesAsRead(chatId);
-        console.log('✅ [FRONTEND] Messages marked as read via HTTP');
+      if (!currentUser?.id) {
+        console.warn('markMessagesAsRead: currentUser not available');
+        return;
       }
+
+      // Only mark messages as read if this is the currently active chat
+      const currentState = stateRef.current;
+      if (!currentState.activeChat || currentState.activeChat._id !== chatId) {
+        console.warn(`markMessagesAsRead: Chat ${chatId} is not the active chat`);
+        return;
+      }
+
+      // Helper function to update read status consistently
+      const updateReadStatus = (messages) => {
+        return messages.map(msg => {
+          // Handle both socket (object) and API (populated) sender formats consistently
+          const senderId = typeof msg.sender === 'object' ? msg.sender._id : msg.sender;
+          if (senderId && currentUser?.id && senderId !== currentUser.id && !msg.read) {
+            return { ...msg, read: true };
+          }
+          return msg;
+        });
+      };
+
+      // Update both activeChat and global messages state for consistency
+      const updatedMessages = updateReadStatus(currentState.activeChat.messages || currentState.messages || []);
+
+      // Update activeChat state
+      dispatch({
+        type: 'SET_ACTIVE_CHAT',
+        payload: {
+          ...currentState.activeChat,
+          messages: updatedMessages
+        }
+      });
+
+      // Update global messages state for consistency
+      if (currentState?.messages && currentState?.messages.length > 0) {
+        dispatch({
+          type: 'UPDATE_MESSAGES',
+          payload: updateReadStatus(currentState.messages)
+        });
+      }
+
+      // Mark as read in backend (try socket first, fallback to API)
+      try {
+        if (stateRef.current.socketConnected) {
+          socketService.markMessagesAsRead(chatId);
+        } else {
+          await chatApi.markMessagesAsRead(chatId);
+        }
+      } catch (socketError) {
+        console.warn('Socket mark as read failed, trying API:', socketError);
+        try {
+          await chatApi.markMessagesAsRead(chatId);
+        } catch (apiError) {
+          console.error('Both socket and API mark as read failed:', apiError);
+        }
+      }
+
+      // Update unread count
+      dispatch({
+        type: 'UPDATE_UNREAD_COUNT',
+        payload: { chatId, count: 0 }
+      });
+
     } catch (err) {
       console.error('❌ [FRONTEND] Failed to mark messages as read:', err);
     }
-  };
+  }, [currentUser?.id]);
 
-  const value = {
+  // Memoize the actions object to prevent recreation
+  const actions = useMemo(() => ({
+    loadChats,
+    loadChat,
+    sendMessage,
+    joinChat,
+    leaveChat,
+    createOrGetChat,
+    searchChats,
+    clearError,
+    startTyping,
+    stopTyping,
+    markMessagesAsRead
+  }), [
+    loadChats,
+    loadChat,
+    sendMessage,
+    joinChat,
+    leaveChat,
+    createOrGetChat,
+    searchChats,
+    clearError,
+    startTyping,
+    stopTyping,
+    markMessagesAsRead
+  ]);
+
+  // Memoize the context value
+  const value = useMemo(() => ({
     state,
-    actions: {
-      loadChats,
-      loadChat,
-      sendMessage,
-      joinChat,
-      leaveChat,
-      createOrGetChat,
-      searchChats,
-      clearError,
-      startTyping,
-      stopTyping,
-      markMessagesAsRead
-    }
-  };
+    actions
+  }), [state, actions]);
 
   return <ChatContext.Provider value={value}>{children}</ChatContext.Provider>;
 };

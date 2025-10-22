@@ -37,7 +37,7 @@ class ChatAPI {
   // Create or get existing chat between two users
   async createOrGetChat(participantId, exchangeId = null) {
     try {
-      console.log("Creating chat with participant");
+      // console.log("Creating chat with participant");
       const response = await api.post('/api/chat/create', {
         participantId,
         exchangeId
@@ -81,6 +81,8 @@ class ChatAPI {
   async markMessagesAsRead(chatId) {
     try {
       const response = await api.put(`/api/chat/${chatId}/read`);
+      // console.log("MarkRead",response);
+      
       return response.data;
     } catch (error) {
       console.error('Error marking messages as read:', error);

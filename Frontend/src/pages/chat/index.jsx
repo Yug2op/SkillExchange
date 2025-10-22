@@ -144,7 +144,7 @@ const ChatPage = () => {
           className={`chat-list-panel ${isMobile && showMobileChat ? 'hidden' : 'visible'
             }`}
         >
-          <ChatList onChatSelect={handleChatSelect} selectedChatId={selectedChatId} />
+          <ChatList onChatSelect={handleChatSelect} selectedChatId={selectedChatId} state = {state} actions = {actions} />
         </div>
 
         {/* Chat Window */}
@@ -161,7 +161,7 @@ const ChatPage = () => {
                 </button>
               )}
 
-              <ChatWindow chatId={selectedChatId} chat={selectedChat} />
+              <ChatWindow chatId={selectedChatId} chat={selectedChat} state={state} actions = {actions} />
             </>
           ) : (
             <div className="no-chat-selected">
@@ -244,7 +244,7 @@ const ChatPage = () => {
                       >
                         <div className="user-avatar">
                           {user.profilePic?.url ? (
-                            <img src={user.profilePic.url} alt={user.name} />
+                            <img src={user.profilePic.url || `https://ui-avatars.com/api/?name=${user?.name || 'U'}&background=random`} alt={user.name} loading="lazy"/>
                           ) : (
                             <div className="avatar-placeholder">
                               {user.name.charAt(0).toUpperCase()}
@@ -256,7 +256,7 @@ const ChatPage = () => {
                           <div className="user-skills">
                             {user.skillsToTeach?.length > 0 && (
                               <span className="skill-tag">
-                                Teaches: {user.skillsToTeach.slice(0, 2).join(', ')}
+                                Teaches: {user.skillsToTeach.slice(0, 2).map(s => s.skill).join(', ')}
                               </span>
                             )}
                           </div>

@@ -15,8 +15,13 @@ const generateToken = (id) => {
 // @access  Public
 export const register = async (req, res, next) => {
   try {
-    const { name, email, password, skillsToTeach, skillsToLearn, role } = req.body;
-
+    const { name, email, password, skillsToTeach, bio , skillsToLearn, role } = req.body;
+    console.log('🔄 Registration request received:', {
+      skillsToLearn,
+      skillsToTeach,
+      bio,
+      role
+    })
     // Check if user exists
     const existingUser = await User.findOne({ email });
     if (existingUser) {
@@ -26,6 +31,7 @@ export const register = async (req, res, next) => {
       });
     }
 
+
     // Create user
     const user = await User.create({
       name,
@@ -33,8 +39,10 @@ export const register = async (req, res, next) => {
       password,
       skillsToTeach: skillsToTeach || [],
       skillsToLearn: skillsToLearn || [],
+      bio,
       role
     });
+
 
     // Generate email verification token
     const verificationToken = crypto.randomBytes(32).toString('hex');
@@ -53,11 +61,12 @@ export const register = async (req, res, next) => {
         email: user.email,
         subject: 'Verify Your Email - Skill Exchange Platform',
         html: `
-          <h1>Welcome to Skill Exchange!</h1>
+          <h1>Verify Your Email</h1>
           <p>Hi ${user.name},</p>
-          <p>Please verify your email by clicking the link below:</p>
-          <a href="${verificationUrl}">Verify Email</a>
+          <p>You requested a new email verification. Please click the link below to verify your account:</p>
+          <a href="${verificationUrl}" style="background: #3b82f6; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; display: inline-block; margin: 16px 0;">Verify Email</a>
           <p>This link will expire in 24 hours.</p>
+          <p>If you didn't request this verification, please ignore this email.</p>
         `
       });
     } catch (error) {
@@ -358,6 +367,82 @@ export const logout = async (req, res, next) => {
       success: true,
       message: 'Logged out successfully'
     });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// @desc    Resend verification email
+// @route   POST /api/auth/resend-verification
+// @access  Public
+export const resendVerification = async (req, res, next) => {
+  try {
+    const { email } = req.body;
+
+    // Find user by email
+    const user = await User.findOne({ email });
+
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: 'No user found with that email address'
+      });
+    }
+
+    // Check if user is already verified
+    if (user.isEmailVerified) {
+      return res.status(400).json({
+        success: false,
+        message: 'Email is already verified'
+      });
+    }
+
+    // Generate new verification token (unhashed - for email URL)
+    const verificationToken = crypto.randomBytes(32).toString('hex');
+    
+    // Hash the token (for database storage)
+    const hashedToken = crypto
+      .createHash('sha256')
+      .update(verificationToken)
+      .digest('hex');
+
+    // Update user with new token and expiration
+    user.emailVerificationToken = hashedToken;
+    user.emailVerificationExpire = Date.now() + 24 * 60 * 60 * 1000; // 24 hours
+    await user.save({ validateBeforeSave: false });
+
+    // Send verification email with unhashed token
+    const verificationUrl = `${process.env.CLIENT_URL}/verify-email?token=${verificationToken}`;
+
+    try {
+      await sendEmail({
+        email: user.email,
+        subject: 'Verify Your Email - Skill Exchange Platform',
+        html: `
+          <h1>Verify Your Email</h1>
+          <p>Hi ${user.name},</p>
+          <p>You requested a new email verification. Please click the link below to verify your account:</p>
+          <a href="${verificationUrl}" style="background: #3b82f6; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; display: inline-block; margin: 16px 0;">Verify Email</a>
+          <p>This link will expire in 24 hours.</p>
+          <p>If you didn't request this verification, please ignore this email.</p>
+        `
+      });
+
+      res.json({
+        success: true,
+        message: 'Verification email sent successfully. Please check your inbox.'
+      });
+    } catch (error) {
+      // If email fails, clean up the tokens
+      user.emailVerificationToken = undefined;
+      user.emailVerificationExpire = undefined;
+      await user.save({ validateBeforeSave: false });
+
+      return res.status(500).json({
+        success: false,
+        message: 'Failed to send verification email. Please try again later.'
+      });
+    }
   } catch (error) {
     next(error);
   }

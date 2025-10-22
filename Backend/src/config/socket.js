@@ -2,7 +2,8 @@ import { Server } from 'socket.io';
 import jwt from 'jsonwebtoken';
 import Chat from '../models/Chat.js';
 import User from '../models/User.js';
-
+import Notification from '../models/Notification.js';
+import mongoose from 'mongoose';
 let io;
 
 export const initializeSocket = (server) => {
@@ -31,40 +32,113 @@ export const initializeSocket = (server) => {
   });
 
   io.on('connection', (socket) => {
-    console.log(`✅ User connected: ${socket.userId}`);
+    // console.log(`✅ User connected: ${socket.userId}`);
 
     // Join user's personal room
     socket.join(socket.userId);
 
     // Join chat room
     socket.on('join-chat', (chatId) => {
-      console.log(`📨 [BACKEND] RECEIVED join-chat event from user ${socket.userId} for chat ${chatId}`);
+      // console.log(`📨 [BACKEND] RECEIVED join-chat event from user ${socket.userId} for chat ${chatId}`);
       socket.join(chatId);
-      console.log(`✅ [BACKEND] User ${socket.userId} joined chat room ${chatId}`);
-      console.log(`📢 [BACKEND] Broadcasting join notification to chat ${chatId}`);
+      // console.log(`✅ [BACKEND] User ${socket.userId} joined chat room ${chatId}`);
+      // console.log(`📢 [BACKEND] Broadcasting join notification to chat ${chatId}`);
     });
 
-    // Send message
-    socket.on('send-message', async ({ chatId, text, receiverId }) => {
+    // Load chat (for real-time updates)
+    socket.on('load-chat', async ({ chatId }) => {
       try {
-        console.log(`📨 [BACKEND] RECEIVED send-message event from user ${socket.userId} to chat ${chatId}`);
-        console.log(`📝 [BACKEND] Message content: "${text.substring(0, 50)}..."`);
+        // console.log(`📋 [BACKEND] User ${socket.userId} loading chat ${chatId}`);
 
-        const chat = await Chat.findById(chatId);
+        const chat = await Chat.findById(chatId)
+          .populate('participants', 'name email profilePic lastActive isOnline')
+          .populate('messages.sender', 'name profilePic');
+
         if (!chat) {
-          console.log(`❌ [BACKEND] Chat ${chatId} not found`);
+          // console.log(`❌ [BACKEND] Chat ${chatId} not found`);
           return socket.emit('error', { message: 'Chat not found' });
         }
 
         if (!chat.participants.includes(socket.userId)) {
-          console.log(`❌ [BACKEND] User ${socket.userId} not authorized in chat ${chatId}`);
+          // console.log(`❌ [BACKEND] User ${socket.userId} not authorized for chat ${chatId}`);
+          return socket.emit('error', { message: 'Not authorized' });
+        }
+
+        // Send chat data to user
+        socket.emit('chat-loaded', { chat });
+        // console.log(`✅ [BACKEND] Chat ${chatId} data sent to user ${socket.userId}`);
+
+        // ✅ FIX: Mark messages as read when chat is loaded via socket (consistent with API)
+        await chat.markMessagesAsRead(socket.userId);
+
+        // ✅ FIX: Broadcast read status to other users in real-time
+        io.to(chatId).emit('messages-read', { chatId, userId: socket.userId });
+
+      } catch (error) {
+        console.error('❌ [BACKEND] load-chat error:', error);
+        socket.emit('error', { message: 'Failed to load chat' });
+      }
+    });
+
+    // Leave chat room
+    socket.on('leave-chat', (chatId) => {
+      // console.log(`🚪 [BACKEND] User ${socket.userId} leaving chat ${chatId}`);
+      socket.leave(chatId);
+      // console.log(`✅ [BACKEND] User ${socket.userId} left chat room ${chatId}`);
+    });
+
+    // Get online users
+    socket.on('get-online-users', async () => {
+      try {
+        // console.log(`👥 [BACKEND] User ${socket.userId} requesting online users`);
+
+        // Get all connected sockets (users)
+        const io = getIO();
+        const connectedSockets = await io.fetchSockets();
+
+        const onlineUsers = connectedSockets.map(s => ({
+          userId: s.userId,
+          connectedAt: s.connectedAt || new Date()
+        }));
+
+        socket.emit('online-users', { users: onlineUsers });
+        // console.log(`✅ [BACKEND] Sent ${onlineUsers.length} online users to user ${socket.userId}`);
+
+      } catch (error) {
+        console.error('❌ [BACKEND] get-online-users error:', error);
+        socket.emit('error', { message: 'Failed to get online users' });
+      }
+    });
+
+    // Send message
+    socket.on('send-message', async ({ chatId, text, messageType, fileData, SenderId }) => {
+      try {
+        // console.log(`📨 [BACKEND] RECEIVED send-message event from user ${socket.userId} to chat ${chatId}`);
+        // console.log(`📝 [BACKEND] Message content: "${text.substring(0, 50)}..."`);
+
+        const chat = await Chat.findById(chatId);
+        if (!chat) {
+          // console.log(`❌ [BACKEND] Chat ${chatId} not found`);
+          return socket.emit('error', { message: 'Chat not found' });
+        }
+
+        if (!chat.participants.includes(socket.userId)) {
+          // console.log(`❌ [BACKEND] User ${socket.userId} not authorized in chat ${chatId}`);
           return socket.emit('error', { message: 'Not authorized in this chat' });
         }
 
+        const user = await User.findById(socket.userId).select('name profilePic')
+
+        const senderId = new mongoose.Types.ObjectId((socket.userId || SenderId).toString());
+
+
+
         const newMessage = {
-          sender: socket.userId,
+          sender: senderId,
           text,
           timestamp: new Date(),
+          read: false, // Important: mark as unread initially
+          messageType: messageType || 'text'
         };
 
         chat.messages.push(newMessage);
@@ -72,22 +146,51 @@ export const initializeSocket = (server) => {
         chat.lastMessageAt = new Date();
         await chat.save();
 
-        console.log(`💾 [BACKEND] Message saved to database`);
-        console.log(`📢 [BACKEND] Broadcasting new-message to chat ${chatId}`);
+        // console.log(`💾 [BACKEND] Message saved to database`);
+        // console.log(`📢 [BACKEND] Broadcasting new-message to chat ${chatId}`);
 
-        // Emit to chat room (all users in the chat except sender)
-        socket.to(chatId).emit('new-message', { chatId, message: newMessage });
-        console.log(`✅ [BACKEND] new-message event broadcast to other users in chat ${chatId}`);
+        // IMPORTANT: Use io.to() instead of socket.to() to broadcast to ALL users in the room INCLUDING sender
+        io.to(chatId).emit('new-message', {
+          chatId,
+          message: {
+            ...newMessage,
+            _id: chat.messages[chat.messages.length - 1]._id, // Include the generated _id
+            sender: {
+              _id: senderId,
+              name: user?.name || 'Unknown',
+              profilePic: user?.profilePic
 
-        // Notify receiver if online
-        if (receiverId) {
-          socket.to(receiverId).emit('message-notification', {
-            chatId,
-            senderId: socket.userId,
-            text,
-          });
-          console.log(`🔔 [BACKEND] Sent notification to receiver ${receiverId}`);
-        }
+
+            }
+          }
+        });
+        // console.log(`✅ [BACKEND] new-message event broadcast to ALL users (including sender) in chat ${chatId}`);
+
+        // Notify receiver if online (separate notification)
+        // if (receiverId) {// Create database notification for message
+        //   try {
+        //     await Notification.create({
+        //       recipient: receiverId,
+        //       sender: socket.userId,
+        //       type: 'message',
+        //       title: 'New Message',
+        //       message: `New message from ${senderName || 'user'}`,
+        //       data: {
+        //         chatId,
+        //         messageId: chat.messages[chat.messages.length - 1]._id
+        //       }
+        //     });
+        //   } catch (error) {
+        //     console.error('Failed to create message notification:', error);
+        //   }
+
+        //   socket.to(receiverId).emit('message-notification', {
+        //     chatId,
+        //     senderId: socket.userId,
+        //     text,
+        //   });
+        //   // console.log(`🔔 [BACKEND] Sent notification to receiver ${receiverId}`);
+        // }
 
       } catch (error) {
         console.error('❌ [BACKEND] send-message error:', error);
@@ -96,45 +199,55 @@ export const initializeSocket = (server) => {
     });
 
     // Typing indicators
-    socket.on('typing', ({ chatId }) => {
-      console.log(`⌨️ [BACKEND] RECEIVED typing event from user ${socket.userId} in chat ${chatId}`);
-      console.log(`📢 [BACKEND] Broadcasting user-typing to other users in chat ${chatId}`);
+    socket.on('typing', async ({ chatId }) => {
+      // console.log(`⌨️ [BACKEND] RECEIVED typing event from user ${socket.userId} in chat ${chatId}`);
+      // console.log(`📢 [BACKEND] Broadcasting user-typing to other users in chat ${chatId}`);
+      const chat = await Chat.findById(chatId);
+      
+      if (!chat.participants.includes(socket.userId)) {
+        return socket.emit('error', { message: 'Not authorized' });
+      }
+
       socket.to(chatId).emit('user-typing', { userId: socket.userId, chatId });
-      console.log(`✅ [BACKEND] user-typing event broadcast`);
+      // console.log(`✅ [BACKEND] user-typing event broadcast`);
     });
 
     socket.on('stop-typing', ({ chatId }) => {
-      console.log(`🛑 [BACKEND] RECEIVED stop-typing event from user ${socket.userId} in chat ${chatId}`);
-      console.log(`📢 [BACKEND] Broadcasting user-stop-typing to other users in chat ${chatId}`);
+      // console.log(`🛑 [BACKEND] RECEIVED stop-typing event from user ${socket.userId} in chat ${chatId}`);
+      // console.log(`📢 [BACKEND] Broadcasting user-stop-typing to other users in chat ${chatId}`);
       socket.to(chatId).emit('user-stop-typing', { userId: socket.userId, chatId });
-      console.log(`✅ [BACKEND] user-stop-typing event broadcast`);
+      // console.log(`✅ [BACKEND] user-stop-typing event broadcast`);
     });
 
-       // Mark messages as read
-       socket.on('mark-as-read', async ({ chatId }) => {
-        try {
-          console.log(`📖 [BACKEND] RECEIVED mark-as-read event for chat ${chatId} from user ${socket.userId}`);
-  
-          const chat = await Chat.findById(chatId);
-          if (!chat) {
-            console.log(`❌ [BACKEND] Chat ${chatId} not found`);
-            return;
-          }
-  
-          // Update messages as read for this user
-          await chat.markMessagesAsRead(socket.userId);
-  
-          console.log(`✅ [BACKEND] Messages marked as read for user ${socket.userId} in chat ${chatId}`);
-          console.log(`📢 [BACKEND] Broadcasting messages-read to other users in chat ${chatId}`);
-  
-          // Broadcast read status to all users in the chat (including sender)
-          io.to(chatId).emit('messages-read', { chatId, userId: socket.userId });
-          console.log(`✅ [BACKEND] messages-read event broadcast`);
-  
-        } catch (err) {
-          console.error('Error marking messages as read:', err);
+    // Mark messages as read
+    socket.on('mark-as-read', async ({ chatId }) => {
+      try {
+        // console.log(`📖 [BACKEND] RECEIVED mark-as-read event for chat ${chatId} from user ${socket.userId}`);
+
+        const chat = await Chat.findById(chatId);
+        if (!chat) {
+          // console.log(`❌ [BACKEND] Chat ${chatId} not found`);
+          return;
         }
-      });
+
+        if (!chat.participants.includes(socket.userId)) {
+          return socket.emit('error', { message: 'Not authorized' });
+        }
+
+        // Update messages as read for this user
+        await chat.markMessagesAsRead(socket.userId);
+
+        // console.log(`✅ [BACKEND] Messages marked as read for user ${socket.userId} in chat ${chatId}`);
+        // console.log(`📢 [BACKEND] Broadcasting messages-read to other users in chat ${chatId}`);
+
+        // Broadcast read status to all users in the chat (including sender)
+        io.to(chatId).emit('messages-read', { chatId, userId: socket.userId });
+        // console.log(`✅ [BACKEND] messages-read event broadcast`);
+
+      } catch (err) {
+        console.error('Error marking messages as read:', err);
+      }
+    });
 
     // User online/offline
     socket.on('set-online', async () => {
@@ -147,7 +260,7 @@ export const initializeSocket = (server) => {
     });
 
     socket.on('disconnect', async () => {
-      console.log(`❌ User disconnected: ${socket.userId}`);
+      // console.log(`❌ User disconnected: ${socket.userId}`);
       try {
         await User.findByIdAndUpdate(socket.userId, { isOnline: false, lastActive: new Date() });
         io.emit('user-status', { userId: socket.userId, isOnline: false, lastActive: new Date() });

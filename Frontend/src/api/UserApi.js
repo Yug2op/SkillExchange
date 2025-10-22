@@ -56,3 +56,9 @@ export const deleteAccount = async (id) => {
   const { data } = await api.delete(`/api/users/${id}`);
   return data;
 };
+
+// GET /api/users/popular-skills
+export const getPopularSkills = async () => {
+  const { data } = await api.get('/api/users/popular-skills');
+  return data;
+};

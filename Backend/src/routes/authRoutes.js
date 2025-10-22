@@ -7,7 +7,8 @@ import {
   forgotPassword,
   resetPassword,
   changePassword,
-  logout
+  logout,
+  resendVerification
 } from '../controllers/authController.js';
 import {
   registerValidation,
@@ -21,6 +22,7 @@ import { authLimiter } from '../middlewares/rateLimiter.js';
 const router = express.Router();
 
 router.post('/register', authLimiter, registerValidation, validate, register);
+router.post('/resend-verification', authLimiter, emailValidation, validate, resendVerification)
 router.post('/login', authLimiter, loginValidation, validate, login);
 router.get('/me', protect, getMe);
 router.post('/verify-email', verifyEmail);

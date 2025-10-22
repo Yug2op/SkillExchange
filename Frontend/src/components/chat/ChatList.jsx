@@ -1,9 +1,8 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { useChat } from '../../contexts/ChatContext.jsx';
+import React, { useState, useMemo, useRef } from 'react';
 import { useMe } from '../../hooks/useMe.js';
 
-const ChatList = ({ onChatSelect, selectedChatId }) => {
-  const { state, actions } = useChat();
+const ChatList = ({ onChatSelect, selectedChatId, state, actions }) => {
+  // const { state, actions } = useChat();
   const [searchQuery, setSearchQuery] = useState('');
   const [showSearch, setShowSearch] = useState(false);
   const searchInputRef = useRef(null);
@@ -30,7 +29,7 @@ const ChatList = ({ onChatSelect, selectedChatId }) => {
       setTimeout(() => searchInputRef.current?.focus(), 100);
     } else {
       setSearchQuery('');
-      actions.loadChats();
+      // actions.loadChats();
     }
   };
 
@@ -89,6 +88,29 @@ const ChatList = ({ onChatSelect, selectedChatId }) => {
     }
   };
 
+    // Add state.unreadCounts as dependency to force re-render
+    const unreadCounts = state.unreadCounts;
+    const chats = state.chats;
+  
+    // Use useMemo to optimize re-renders
+    const chatItems = useMemo(() => {
+      return chats?.map((chat) => {
+        const otherParticipant = getOtherParticipant(chat);
+        const unreadCount = unreadCounts[chat._id] || 0;
+        const isSelected = selectedChatId === chat._id;
+        // console.log("Count = ", 1);
+        
+  
+        return {
+          chat,
+          otherParticipant,
+          unreadCount,
+          isSelected,
+          key: chat._id
+        };
+      });
+    }, [chats, unreadCounts, selectedChatId]);
+  
 
   return (
     <div className="chat-list">
@@ -147,15 +169,10 @@ const ChatList = ({ onChatSelect, selectedChatId }) => {
             <p className="empty-subtitle">Start a conversation with someone!</p>
           </div>
         ) : (
-          state.chats?.map((chat) => {
-            const otherParticipant = getOtherParticipant(chat);
-            // console.log(otherParticipant);
-            const unreadCount = state.unreadCounts[chat._id] || 0;
-            const isSelected = selectedChatId === chat._id;
-
+          chatItems?.map(({ chat, otherParticipant, unreadCount, isSelected, key }) => {
             return (
               <div
-                key={chat?._id}
+                key={key}
                 className={`chat-item ${isSelected ? 'selected' : ''}`}
                 onClick={() => handleChatClick(chat)}
               >
@@ -165,6 +182,7 @@ const ChatList = ({ onChatSelect, selectedChatId }) => {
                   <img
                     src={otherParticipant.profilePic?.url || '/default-avatar.png'}
                     alt={otherParticipant.name}
+                    loading="lazy"
                     className="avatar"
                     style={{ width: 40, height: 40, borderRadius: '50%' }}
                   />
@@ -280,13 +298,13 @@ const ChatList = ({ onChatSelect, selectedChatId }) => {
 
 .search-icon {
   position: absolute;
-  left: 12px;
   color: #6c757d;
-  font-size: 14px;
+  font-size: 12px;
+  opacity:80%
 }
 
 .search-input {
-  width: 100%;
+  width: 50%;
   padding: 10px 12px 10px 36px;
   border: 1px solid #dee2e6;
   border-radius: 20px;
@@ -584,4 +602,4 @@ const ChatList = ({ onChatSelect, selectedChatId }) => {
   );
 };
 
-export default ChatList;
+export default React.memo(ChatList);

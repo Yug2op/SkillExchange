@@ -33,7 +33,7 @@ class SocketService {
    */
   connect() {
     if (this.socket && this.socket.connected) {
-      console.log('✅ Socket already connected (reuse)');
+      // console.log('✅ Socket already connected (reuse)');
       // ensure internal listeners are wired
       this._ensureSetup();
       return Promise.resolve(this.socket);
@@ -47,7 +47,7 @@ class SocketService {
       }
 
       const url = import.meta.env.VITE_API_URL || 'http://localhost:8080';
-      console.log('🚀 Connecting to socket:', url);
+      // console.log('🚀 Connecting to socket:', url);
 
       this.socket = io(url, {
         auth: { token },
@@ -60,7 +60,7 @@ class SocketService {
 
       this.socket.on('connect', () => {
         this.isConnected = true;
-        console.log('✅ Socket connected (id: %s)', this.socket.id);
+        // console.log('✅ Socket connected (id: %s)', this.socket.id);
         this.emit('connect');
         // Ensure all event forwarding is set
         this._ensureSetup();
@@ -105,13 +105,14 @@ class SocketService {
 
     // Backend events (use the names your backend emits)
     const events = [
-      'new-message',
+      'new-message', 
       'message-notification',
       'messages-read',
       'user-typing',
       'user-stop-typing',
       'user-status',
-      'user-status-update' // in case your backend emits either
+      'chat-loaded',
+      'error'
     ];
 
     events.forEach((evt) => {
@@ -122,7 +123,7 @@ class SocketService {
     });
 
     // Accept camelCase variants too (optional)
-    const camelEvents = ['newMessage', 'messageNotification', 'messagesRead', 'userTyping', 'userStopTyping', 'userStatus', 'userStatusUpdate'];
+    const camelEvents = ['newMessage', 'messageNotification', 'messagesRead', 'userTyping', 'userStopTyping', 'userStatus', 'chatLoaded', 'error'];
     camelEvents.forEach(evt => {
       this.socket.on(evt, (data) => this.emit(evt, data));
     });
@@ -146,14 +147,14 @@ class SocketService {
   // ---- Emitters (server-bound actions) ----
   joinChat(chatId) { 
     this.socket?.emit('join-chat', chatId);
-    console.log('📡 Emitting join-chat event:', chatId, 'Socket exists:', !!this.socket);
+    // console.log('📡 Emitting join-chat event:', chatId, 'Socket exists:', !!this.socket);
 
    }
-  loadChats(chatId) { this.socket?.emit('loadChat',chatId)}
+  loadChats(chatId) { this.socket?.emit('load-chat',chatId)}
   leaveChat(chatId) { this.socket?.emit('leave-chat', chatId); }
-  sendMessage(chatId, text, messageType = 'text', fileData = null) {
-    this.socket?.emit('send-message', { chatId, text, messageType, fileData });
-  }
+  sendMessage(chatId, text, messageType = 'text', fileData = null, senderId) {
+    this.socket?.emit('send-message', { chatId, text, messageType, fileData, senderId});
+  }  
   startTyping(chatId) { this.socket?.emit('typing', { chatId }); }
   stopTyping(chatId) { this.socket?.emit('stop-typing', { chatId }); }
   markMessagesAsRead(chatId) { this.socket?.emit('mark-as-read', { chatId }); }

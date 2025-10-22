@@ -2,6 +2,7 @@ import ExchangeRequest from '../models/ExchangeRequest.js';
 import Chat from '../models/Chat.js';
 import User from '../models/User.js';
 import { getIO } from '../config/socket.js';
+import Notification from '../models/Notification.js';
 
 // @desc    Create exchange request
 // @route   POST /api/exchanges/request
@@ -51,6 +52,16 @@ export const createExchangeRequest = async (req, res, next) => {
     });
 
     await exchangeRequest.populate('sender receiver', 'name email profilePic');
+
+    // Create notification in database
+    await Notification.create({
+      recipient: receiverId,
+      sender: req.user.id,
+      type: 'exchange_request',
+      title: 'New Exchange Request',
+      message: `${req.user.name} sent you a skill exchange request`,
+      data: { exchangeRequestId: exchangeRequest._id }
+    });
 
     // Send notification to receiver via socket
     try {
@@ -178,29 +189,24 @@ export const acceptExchange = async (req, res, next) => {
     exchange.status = 'accepted';
 
     // Find or create chat for the exchange
-    // First, try to find existing chat between these users
     let chat = await Chat.findOne({
       participants: { $all: [exchange.sender, exchange.receiver] },
       isActive: true
     });
 
     if (!chat) {
-      // Create new chat if none exists
       chat = await Chat.create({
         participants: [exchange.sender, exchange.receiver],
         exchange: exchange._id,
         chatType: 'exchange'
       });
     } else {
-      // If chat exists, just link this exchange to it
-      // (don't overwrite existing exchange link if any)
       if (!chat.exchange) {
         chat.exchange = exchange._id;
         await chat.save();
       }
     }
 
-    // Ensure the exchange is linked to the chat
     if (!exchange.chat) {
       exchange.chat = chat._id;
       await exchange.save();
@@ -208,6 +214,36 @@ export const acceptExchange = async (req, res, next) => {
 
     await exchange.populate('sender receiver', 'name email profilePic');
 
+    // ✅ ENSURE: All database operations complete first
+    await Promise.all([
+      exchange.save(),
+      chat.save(),
+      Notification.create({
+        recipient: exchange.sender.toString(),
+        sender: req.user.id,
+        type: 'exchange_accepted',
+        title: 'Exchange Request Accepted',
+        message: `${req.user.name} accepted your skill exchange request`,
+        data: { 
+          exchangeRequestId: exchange._id,
+          chatId: chat._id
+        }
+      })
+    ]);
+
+    // ✅ THEN send socket notification
+    try {
+      const io = getIO();
+      io.to(exchange.sender.toString()).emit('exchange-accepted', {
+        exchange,
+        acceptedBy: req.user.name
+      });
+    } catch (error) {
+      console.error('Socket notification failed:', error);
+      // Don't fail the request if socket fails
+    }
+
+    // ✅ FINALLY send response after all operations
     res.json({
       success: true,
       message: 'Exchange request accepted',
@@ -255,7 +291,20 @@ export const rejectExchange = async (req, res, next) => {
 
     await exchange.populate('sender receiver', 'name email profilePic');
 
-    // Notify sender
+    // Create notification for sender
+    await Notification.create({
+      recipient: exchange.sender.toString(),
+      sender: req.user.id,
+      type: 'exchange_rejected',
+      title: 'Exchange Request Rejected',
+      message: `${req.user.name} rejected your skill exchange request`,
+      data: {
+        exchangeRequestId: exchange._id,
+        rejectionReason: reason
+      }
+    });
+
+    // Notify sender via socket
     try {
       const io = getIO();
       io.to(exchange.sender.toString()).emit('exchange-rejected', {
@@ -322,7 +371,8 @@ export const scheduleSession = async (req, res, next) => {
     if (!exchange) {
       return res.status(404).json({
         success: false,
-        message: 'Exchange request not found'        });
+        message: 'Exchange request not found'
+      });
     }
 
     if (exchange.status !== 'accepted') {
@@ -332,15 +382,60 @@ export const scheduleSession = async (req, res, next) => {
       });
     }
 
-    exchange.scheduledSessions.push({
+    // Add the new session to scheduled sessions
+    const newSession = {
       date,
       startTime,
       endTime,
       type,
       location,
-      meetingLink
-    });
+      meetingLink,
+      completed: false
+    };
+
+    exchange.scheduledSessions.push(newSession);
     await exchange.save();
+
+    // Populate for notification data
+    await exchange.populate('sender receiver', 'name email profilePic');
+
+    // ✅ ADD: Create notifications for both participants
+    const otherParticipantId = exchange.sender.toString() === req.user.id
+      ? exchange.receiver.toString()
+      : exchange.sender.toString();
+
+    // Notify the other participant
+    await Notification.create({
+      recipient: otherParticipantId,
+      sender: req.user.id,
+      type: 'session_scheduled',
+      title: 'Session Scheduled',
+      message: `${req.user.name} scheduled a ${type} session for ${new Date(date).toLocaleDateString()}`,
+      data: {
+        exchangeId: exchange._id,
+        sessionId: exchange.scheduledSessions[exchange.scheduledSessions.length - 1]._id,
+        sessionType: type,
+        sessionDate: date,
+        sessionTime: startTime
+      }
+    });
+
+    // Send real-time socket notification to other participant
+    try {
+      const io = getIO();
+      io.to(otherParticipantId).emit('session-scheduled', {
+        exchangeId: exchange._id,
+        scheduledBy: req.user.name,
+        sessionType: type,
+        sessionDate: date,
+        sessionTime: startTime,
+        location,
+        meetingLink,
+        message: `New ${type} session scheduled for ${new Date(date).toLocaleDateString()}`
+      });
+    } catch (error) {
+      console.error('Socket notification failed:', error);
+    }
 
     res.json({
       success: true,
@@ -384,6 +479,31 @@ export const completeExchange = async (req, res, next) => {
       });
     }
     await exchange.save();
+
+    // Create notifications for both participants
+    const otherParticipantId = exchange.sender.toString() === req.user.id
+      ? exchange.receiver.toString()
+      : exchange.sender.toString();
+
+    await Notification.create({
+      recipient: otherParticipantId,
+      sender: req.user.id,
+      type: 'exchange_completed',
+      title: 'Exchange Completed',
+      message: `${req.user.name} marked the skill exchange as completed`,
+      data: { exchangeRequestId: exchange._id }
+    });
+
+    // Add after database notification creation
+    try {
+      const io = getIO();
+      io.to(otherParticipantId).emit('exchange-completed', {
+        exchange,
+        completedBy: req.user.name
+      });
+    } catch (error) {
+      console.error('Socket notification failed:', error);
+    }
 
     res.json({
       success: true,

@@ -25,3 +25,8 @@ export const deleteReview = async (id) => {
   const { data } = await api.delete(`/api/reviews/${id}`);
   return data;
 };
+
+export const checkReviewExists = async (exchangeId) => {
+  const { data } = await api.get(`/api/reviews/check/${exchangeId}`);
+  return data;
+}

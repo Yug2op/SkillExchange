@@ -1,6 +1,7 @@
 import User from '../models/User.js';
 import { uploadToCloudinary, deleteFromCloudinary } from '../config/cloudinary.js';
 import fs from 'fs';
+import { findMatches } from '../utils/matchingEngine.js';
 
 // @desc    Get user profile
 // @route   GET /api/users/:id
@@ -9,6 +10,7 @@ export const getUserProfile = async (req, res, next) => {
   try {
     const user = await User.findById(req.params.id)
       .select('-password -emailVerificationToken -resetPasswordToken');
+
 
     if (!user) {
       return res.status(404).json({
@@ -47,7 +49,17 @@ export const updateProfile = async (req, res, next) => {
     const updates = {};
     Object.keys(req.body).forEach(key => {
       if (allowedUpdates.includes(key)) {
-        updates[key] = req.body[key];
+        if (key === 'skillsToTeach' || key === 'skillsToLearn') {
+          // Ensure skills are objects with skill and level
+          updates[key] = (req.body[key] || []).map(skill => {
+            if (typeof skill === 'string') {
+              return { skill, level: 'Beginner' }; // Default level
+            }
+            return skill; // Already an object
+          });
+        } else {
+          updates[key] = req.body[key];
+        }
       }
     });
 
@@ -156,9 +168,13 @@ export const uploadProfilePicture = async (req, res, next) => {
 // @access  Public
 export const searchUsers = async (req, res, next) => {
   try {
-    const { q, teach, learn, location, page = 1, limit = 20 } = req.query;
+    const { q, teach, learn, location, page = 1, limit = 20, excludeUserId } = req.query;
 
     const query = { isActive: true };
+    if (excludeUserId) {
+      query._id = { $ne: excludeUserId };
+    }
+
     const orConditions = [];
 
     // General text search (name, bio, skills)
@@ -168,18 +184,18 @@ export const searchUsers = async (req, res, next) => {
       orConditions.push(
         { name: { $regex: q, $options: 'i' } },
         { bio: { $regex: q, $options: 'i' } },
-        { skillsToTeach: { $regex: q, $options: 'i' } },
-        { skillsToLearn: { $regex: q, $options: 'i' } }
+        { "skillsToTeach.skill": { $regex: q, $options: 'i' } },
+        { "skillsToLearn.skill": { $regex: q, $options: 'i' } }
       );
-    } 
+    }
 
     // Skills search
     if (teach) {
-      orConditions.push({ skillsToTeach: { $regex: teach, $options: 'i' } });
+      orConditions.push({ "skillsToTeach.skill": { $regex: teach, $options: 'i' } });
     }
 
     if (learn) {
-      orConditions.push({ skillsToLearn: { $regex: learn, $options: 'i' } });
+      orConditions.push({ "skillsToLearn.skill": { $regex: learn, $options: 'i' } });
     }
 
     // Location search
@@ -222,74 +238,7 @@ export const searchUsers = async (req, res, next) => {
   }
 };
 
-// Helper: compute matches for a given user document
-const computeMatches = async (currentUser) => {
-  const matchesMap = new Map();
-  const skillsToLearn = currentUser.skillsToLearn || [];
-  const skillsToTeach = currentUser.skillsToTeach || [];
 
-  // 1) Find users who can teach the skills current user wants to learn
-  for (const skill of skillsToLearn) {
-    const canTeachUsers = await User.find({
-      isActive: true,
-      skillsToTeach: skill,
-      _id: { $ne: currentUser._id }
-    }).select('name profilePic location skillsToTeach skillsToLearn rating bio');
-
-    canTeachUsers.forEach(user => {
-      const id = user._id.toString();
-      if (!matchesMap.has(id)) {
-        matchesMap.set(id, {
-          user,
-          matchedSkills: { canTeachYou: [skill], wantsToLearn: [] },
-          matchScore: 1
-        });
-      } else {
-        matchesMap.get(id).matchedSkills.canTeachYou.push(skill);
-        matchesMap.get(id).matchScore += 1;
-      }
-    });
-  }
-
-  // 2) Find users who want to learn skills current user can teach
-  for (const skill of skillsToTeach) {
-    const wantsUsers = await User.find({
-      isActive: true,
-      skillsToLearn: skill,
-      _id: { $ne: currentUser._id }
-    }).select('name profilePic location skillsToTeach skillsToLearn rating bio');
-
-    wantsUsers.forEach(user => {
-      const id = user._id.toString();
-      if (!matchesMap.has(id)) {
-        matchesMap.set(id, {
-          user,
-          matchedSkills: { canTeachYou: [], wantsToLearn: [skill] },
-          matchScore: 1
-        });
-      } else {
-        matchesMap.get(id).matchedSkills.wantsToLearn.push(skill);
-        matchesMap.get(id).matchScore += 1;
-      }
-    });
-  }
-
-  // 3) Optional: sameLocation flag
-  matchesMap.forEach(match => {
-    if (currentUser.location && match.user.location) {
-      match.sameLocation = currentUser.location.city === match.user.location.city;
-    } else {
-      match.sameLocation = false;
-    }
-  });
-
-  // 4) Return sorted list
-  const uniqueMatches = Array.from(matchesMap.values())
-    .filter(match => match.matchScore > 0)
-    .sort((a, b) => b.matchScore - a.matchScore);
-
-  return uniqueMatches;
-};
 
 // @desc    Get skill matches for current user
 // @route   GET /api/users/matches
@@ -305,13 +254,21 @@ export const getMatches = async (req, res, next) => {
       return res.json({
         success: true,
         message: 'Please add skills to teach and learn to find matches',
-        data: { matches: [] }
+        data: { matches: [], pagination: { total: 0, pages: 1, page: 1 } }
       });
     }
 
-    const matches = await computeMatches(currentUser);
+    // Extract and normalize query params
+    const { page = 1, limit = 12, sortBy = 'matchScore', filterBy = 'all' } = req.query || {};
 
-    return res.json({ success: true, data: { matches } });
+    const result = await findMatches(currentUser, {
+      page: Number.parseInt(page, 10) || 1,
+      limit: Number.parseInt(limit, 10) || 12,
+      sortBy,
+      filterBy,
+    });
+
+    return res.json({ success: true, data: result });
   } catch (error) {
     next(error);
   }
@@ -345,6 +302,59 @@ export const deleteAccount = async (req, res, next) => {
     res.json({
       success: true,
       message: 'Account deactivated successfully'
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// @desc    Get popular skills for public display
+// @route   GET /api/users/popular-skills
+// @access  Public
+export const getPopularSkills = async (req, res, next) => {
+  try {
+    // Get top skills to teach (most offered)
+    const topSkillsToTeach = await User.aggregate([
+      { $unwind: '$skillsToTeach' },
+      { $group: { _id: '$skillsToTeach.skill', count: { $sum: 1 } } },
+      { $sort: { count: -1 } },
+      { $limit: 15 }
+    ]);
+
+    // Get top skills to learn (most requested)
+    const topSkillsToLearn = await User.aggregate([
+      { $unwind: '$skillsToLearn' },
+      { $group: { _id: '$skillsToLearn.skill', count: { $sum: 1 } } },
+      { $sort: { count: -1 } },
+      { $limit: 15 }
+    ]);
+
+    // Combine and deduplicate skills
+    const allSkills = [...topSkillsToTeach, ...topSkillsToLearn];
+    const skillMap = new Map();
+
+    allSkills.forEach(skill => {
+      if (skillMap.has(skill._id)) {
+        skillMap.get(skill._id).count += skill.count;
+      } else {
+        skillMap.set(skill._id, { _id: skill._id, count: skill.count });
+      }
+    });
+
+    const popularSkills = Array.from(skillMap.values())
+      .sort((a, b) => b.count - a.count)
+      .slice(0, 20)
+      .map(skill => skill._id);
+
+    res.json({
+      success: true,
+      data: {
+        popularSkills,
+        stats: {
+          teach: topSkillsToTeach.slice(0, 10),
+          learn: topSkillsToLearn.slice(0, 10)
+        }
+      }
     });
   } catch (error) {
     next(error);

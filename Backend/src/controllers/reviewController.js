@@ -1,6 +1,8 @@
 import Review from '../models/Review.js';
 import ExchangeRequest from '../models/ExchangeRequest.js';
 import User from '../models/User.js';
+import Notification from '../models/Notification.js';
+import { getIO } from '../config/socket.js';
 
 // @desc    Create review
 // @route   POST /api/reviews
@@ -88,6 +90,32 @@ export const createReview = async (req, res, next) => {
     // Update reviewee's rating
     const reviewee = await User.findById(revieweeId);
     await reviewee.updateRating(rating);
+
+    // ✅ ADD: Create database notification for reviewee
+    await Notification.create({
+      recipient: revieweeId,
+      sender: req.user.id,
+      type: 'review_received',
+      title: 'New Review Received',
+      message: `${req.user.name} left you a ${rating}-star review`,
+      data: { 
+        reviewId: review._id,
+        rating,
+        exchangeId
+      }
+    });
+
+    // ✅ ADD: Send real-time socket notification
+    try {
+      const io = getIO();
+      io.to(revieweeId).emit('new-review-notification', {
+        review,
+        rating,
+        reviewerName: req.user.name
+      });
+    } catch (error) {
+      console.error('Socket notification failed:', error);
+    }
 
     res.status(201).json({
       success: true,
@@ -180,6 +208,7 @@ export const getMyGivenReviews = async (req, res, next) => {
   try {
     const reviews = await Review.find({ reviewer: req.user.id })
       .populate('reviewee', 'name profilePic')
+      .populate('reviewer', 'name profilePic')
       .populate('exchange', 'skillOffered skillRequested')
       .sort({ createdAt: -1 });
 
@@ -215,6 +244,10 @@ export const updateReview = async (req, res, next) => {
     }
 
     const { rating, feedback, aspectRatings, isPublic } = req.body;
+    
+    // ✅ FIX: Store old rating before updating
+    const oldRating = review.rating;
+    
     if (rating) review.rating = rating;
     if (feedback) review.feedback = feedback;
     if (aspectRatings) review.aspectRatings = aspectRatings;
@@ -223,10 +256,10 @@ export const updateReview = async (req, res, next) => {
     await review.save();
 
     // Update reviewee's rating if rating changed
-    if (rating) {
+    if (rating && oldRating !== rating) {
       const reviewee = await User.findById(review.reviewee);
       const oldTotal = reviewee.rating.average * reviewee.rating.count;
-      const newTotal = oldTotal - review.rating + rating;
+      const newTotal = oldTotal - oldRating + rating; // Use stored old rating
       reviewee.rating.average = newTotal / reviewee.rating.count;
       await reviewee.save();
     }
@@ -279,6 +312,28 @@ export const deleteReview = async (req, res, next) => {
     res.json({
       success: true,
       message: 'Review deleted successfully'
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// @desc    Check if review exists for exchange
+// @route   GET /api/reviews/check/:exchangeId
+// @access  Private
+export const checkReviewExists = async (req, res, next) => {
+  try {
+    const review = await Review.findOne({
+      reviewer: req.user.id,
+      exchange: req.params.exchangeId
+    });
+
+    res.json({
+      success: true,
+      data: {
+        hasReview: !!review,
+        reviewId: review?._id
+      }
     });
   } catch (error) {
     next(error);

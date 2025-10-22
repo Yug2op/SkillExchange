@@ -1,4 +1,7 @@
 import Chat from '../models/Chat.js';
+import Notification from '../models/Notification.js';
+import { getIO } from '../config/socket.js';
+import mongoose from 'mongoose';
 
 // @desc    Get user's chats
 // @route   GET /api/chat
@@ -73,6 +76,13 @@ export const getChatById = async (req, res, next) => {
 
     // Mark messages as read when chat is accessed
     await chat.markMessagesAsRead(req.user.id);
+
+    // Broadcast read status to other users in real-time
+    const io = getIO();
+    io.to(req.params.id).emit('messages-read', {
+      chatId: req.params.id,
+      userId: req.user.id
+    });
 
     res.json({
       success: true,
@@ -163,14 +173,31 @@ export const sendMessage = async (req, res, next) => {
       });
     }
 
-    // Add message to chat
-    await chat.addMessage(req.user.id, text, messageType, fileData);
+    const senderId = new mongoose.Types.ObjectId(req.user.id);
+
+
+    // Add message to chat using direct approach
+    const newMessage = {
+      sender: senderId,
+      text,
+      messageType,
+      fileData,
+      read: false,
+      timestamp: new Date()
+    };
+
+    chat.messages.push(newMessage);
+    chat.lastMessage = text;
+    chat.lastMessageAt = new Date();
+    await chat.save();
 
     // Populate the new message sender data
     await chat.populate('messages.sender', 'name profilePic');
 
     // Get the last message (the one we just added)
     const lastMessage = chat.messages[chat.messages.length - 1];
+
+
 
     res.status(201).json({
       success: true,
@@ -189,7 +216,7 @@ export const getUnreadCount = async (req, res, next) => {
     const chats = await Chat.find({
       participants: req.user.id,
       isActive: true
-    }).populate('messages.sender', 'name'); // Add this line to populate sender data
+    }).populate('messages.sender', 'name');
 
     const unreadCounts = chats.map(chat => ({
       _id: chat._id,
@@ -238,6 +265,13 @@ export const markMessagesAsRead = async (req, res, next) => {
     }
 
     await chat.markMessagesAsRead(req.user.id);
+
+    // Broadcast read status to other users in real-time
+    const io = getIO();
+    io.to(req.params.id).emit('messages-read', {
+      chatId: req.params.id,
+      userId: req.user.id
+    });
 
     res.json({
       success: true,

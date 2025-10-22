@@ -14,7 +14,7 @@ import {
   scheduleSessionValidation
 } from '../validators/exchangeValidator.js';
 import validate from '../middlewares/validation.js';
-import { protect } from '../middlewares/auth.js';
+import { protect } from '../middlewares/auth.js'; 
 
 const router = express.Router();
 

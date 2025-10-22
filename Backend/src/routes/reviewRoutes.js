@@ -4,17 +4,18 @@ import {
   getUserReviews,
   getMyGivenReviews,
   updateReview,
-  deleteReview
+  deleteReview,
+  checkReviewExists
 } from '../controllers/reviewController.js';
 import { protect } from '../middlewares/auth.js';
-import { chatLimiter } from '../middlewares/rateLimiter.js';
 
 const router = express.Router();
 
-router.post('/', protect, chatLimiter, createReview);
-router.get('/my/given', protect, chatLimiter, getMyGivenReviews);
-router.get('/:userId', protect, chatLimiter,getUserReviews);
-router.put('/:id', protect, chatLimiter, updateReview);
-router.delete('/:id', protect, chatLimiter, deleteReview);
+router.post('/', protect, createReview);
+router.get('/my/given', protect, getMyGivenReviews);
+router.get('/:userId', protect,getUserReviews);
+router.put('/:id', protect, updateReview);
+router.delete('/:id', protect, deleteReview);
+router.get('/check/:exchangeId', protect, checkReviewExists);
 
 export default router;

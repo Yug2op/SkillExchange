@@ -42,3 +42,9 @@ export const logout = async () => {
   const { data } = await api.post('/api/auth/logout');
   return data;
 };
+
+// POST /api/auth/resend-verification
+export const resendVerification = async (email) => {
+  const { data } = await api.post('/api/auth/resend-verification', { email });
+  return data;
+};

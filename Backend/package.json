@@ -7,6 +7,7 @@
   "scripts": {
     "start": "node server.js",
     "dev": "nodemon server.js",
+    "cleanup": "node -e \"import('./src/utils/notificationCleanup.js').then(m => m.cleanupOldNotifications())\"",
     "test": "jest --coverage",
     "lint": "eslint ."
   },

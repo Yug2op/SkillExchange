@@ -8,5 +8,28 @@ export default defineConfig({
     alias: {
       "@": path.resolve(__dirname, "src")
     }
+  },
+  build: {
+    // Enable code splitting and optimization
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          // Core React libraries
+          vendor: ['react', 'react-dom'],
+          // UI component libraries
+          ui: ['@headlessui/react', '@radix-ui/react-dialog', '@radix-ui/react-select'],
+          // State management & data fetching
+          state: ['@tanstack/react-query', 'axios'],
+          // Utilities
+          utils: ['framer-motion', 'date-fns', 'clsx'],
+          // Real-time features
+          realtime: ['socket.io-client']
+        }
+      }
+    },
+    // Optimize chunk size warnings
+    chunkSizeWarningLimit: 1000,
+    // Enable source maps for production debugging
+    sourcemap: true
   }
 });

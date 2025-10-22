@@ -2,6 +2,8 @@ import User from '../models/User.js';
 import ExchangeRequest from '../models/ExchangeRequest.js';
 import Review from '../models/Review.js';
 import Skill from '../models/Skill.js';
+import Notification from '../models/Notification.js';
+import { getIO } from '../config/socket.js';
 
 // @desc    Get all users
 // @route   GET /api/admin/users
@@ -71,14 +73,14 @@ export const getDashboardStats = async (req, res, next) => {
     // Top skills
     const topSkillsToTeach = await User.aggregate([
       { $unwind: '$skillsToTeach' },
-      { $group: { _id: '$skillsToTeach', count: { $sum: 1 } } },
+      { $group: { _id: '$skillsToTeach.skill', count: { $sum: 1 } } },
       { $sort: { count: -1 } },
       { $limit: 10 }
     ]);
 
     const topSkillsToLearn = await User.aggregate([
       { $unwind: '$skillsToLearn' },
-      { $group: { _id: '$skillsToLearn', count: { $sum: 1 } } },
+      { $group: { _id: '$skillsToLearn.skill', count: { $sum: 1 } } },
       { $sort: { count: -1 } },
       { $limit: 10 }
     ]);
@@ -139,12 +141,44 @@ export const deactivateUser = async (req, res, next) => {
       });
     }
 
+    // Prevent admin from deactivating themselves
+    if (req.user.id === req.params.id) {
+      return res.status(400).json({
+        success: false,
+        message: 'You cannot deactivate your own account'
+      });
+    }
+
     user.isActive = false;
     await user.save({ validateBeforeSave: false });
 
+    // ✅ ADD: Create database notification for deactivated user
+    await Notification.create({
+      recipient: req.params.id,
+      sender: req.user.id,
+      type: 'account_deactivated',
+      title: 'Account Deactivated',
+      message: `Your account has been deactivated by an administrator`,
+      data: { 
+        deactivatedBy: req.user.id,
+        reason: 'Administrative action'
+      }
+    });
+
+    // ✅ ADD: Send real-time socket notification
+    try {
+      const io = getIO();
+      io.to(req.params.id).emit('account-status-changed', {
+        status: 'deactivated',
+        message: 'Your account has been deactivated by an administrator'
+      });
+    } catch (error) {
+      console.error('Socket notification failed:', error);
+    }
+
     res.json({
       success: true,
-      message: 'User deactivated successfully'
+      message: 'User deactivated successfully. They will be logged out on their next request.'
     });
   } catch (error) {
     next(error);
@@ -167,6 +201,29 @@ export const activateUser = async (req, res, next) => {
 
     user.isActive = true;
     await user.save({ validateBeforeSave: false });
+
+    // ✅ ADD: Create database notification for activated user
+    await Notification.create({
+      recipient: req.params.id,
+      sender: req.user.id,
+      type: 'account_activated',
+      title: 'Account Activated',
+      message: `Your account has been activated by an administrator`,
+      data: { 
+        activatedBy: req.user.id
+      }
+    });
+
+    // ✅ ADD: Send real-time socket notification
+    try {
+      const io = getIO();
+      io.to(req.params.id).emit('account-status-changed', {
+        status: 'activated',
+        message: 'Your account has been activated by an administrator'
+      });
+    } catch (error) {
+      console.error('Socket notification failed:', error);
+    }
 
     res.json({
       success: true,
@@ -202,49 +259,32 @@ export const deleteUser = async (req, res, next) => {
 
     await user.deleteOne();
 
+    // ✅ ADD: Create database notification for deleted user (before deletion)
+    await Notification.create({
+      recipient: req.params.id,
+      sender: req.user.id,
+      type: 'account_deleted',
+      title: 'Account Deleted',
+      message: `Your account has been permanently deleted by an administrator`,
+      data: { 
+        deletedBy: req.user.id,
+        reason: 'Administrative action'
+      }
+    });
+
+    // ✅ ADD: Send real-time socket notification
+    try {
+      const io = getIO();
+      io.to(req.params.id).emit('account-permanently-deleted', {
+        message: 'Your account has been permanently deleted by an administrator'
+      });
+    } catch (error) {
+      console.error('Socket notification failed:', error);
+    }
+
     res.json({
       success: true,
       message: 'User and related data deleted successfully'
-    });
-  } catch (error) {
-    next(error);
-  }
-};
-
-// @desc    Create skill category
-// @route   POST /api/admin/skills
-// @access  Private/Admin
-export const createSkill = async (req, res, next) => {
-  try {
-    const { name, category, tags, description } = req.body;
-
-    const skill = await Skill.create({
-      name,
-      category,
-      tags,
-      description
-    });
-
-    res.status(201).json({
-      success: true,
-      message: 'Skill created successfully',
-      data: { skill }
-    });
-  } catch (error) {
-    next(error);
-  }
-};
-
-// @desc    Get all skills
-// @route   GET /api/admin/skills
-// @access  Private/Admin
-export const getAllSkills = async (req, res, next) => {
-  try {
-    const skills = await Skill.find().sort({ userCount: -1 });
-
-    res.json({
-      success: true,
-      data: { skills }
     });
   } catch (error) {
     next(error);

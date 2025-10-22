@@ -1,6 +1,15 @@
 import mongoose from 'mongoose';
 import bcrypt from 'bcryptjs';
 
+const skillWithProficiencySchema = new mongoose.Schema({
+  skill: { type: String, required: true, trim: true },
+  level: { 
+    type: String, 
+    required: true, 
+    enum: ['Beginner', 'Intermediate', 'Advanced', 'Expert'] 
+  }
+}, { _id: false });
+
 const userSchema = new mongoose.Schema({
   name: {
     type: String,
@@ -29,14 +38,8 @@ const userSchema = new mongoose.Schema({
     url: String,
     publicId: String
   },
-  skillsToTeach: [{
-    type: String,
-    trim: true
-  }],
-  skillsToLearn: [{
-    type: String,
-    trim: true
-  }],
+  skillsToTeach: [skillWithProficiencySchema],
+  skillsToLearn: [skillWithProficiencySchema],
   location: {
     city: String,
     country: String,
