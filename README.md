@@ -144,7 +144,7 @@ PORT=8080
 NODE_ENV=development
 
 # Database
-MONGODB_URI=mongodb://localhost:27017/skillexchange
+MONGODB_URI=mongodb:// link
 
 # JWT Configuration
 JWT_SECRET=your-super-secret-jwt-key
