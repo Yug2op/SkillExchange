@@ -16,15 +16,11 @@ api.interceptors.response.use(
       // Clear any cached user data
       if (typeof window !== 'undefined') {
         localStorage.removeItem('socketToken');
-        
-        const currentPath = window.location.pathname;
-        if (currentPath !== '/login') {
-          window.location.href = '/login';
-        }
       }
       return Promise.reject({
         success: false,
-        message: err.response.data?.message || 'Authentication failed'
+        message: err.response.data?.message || 'Authentication failed',
+        status: 401
       });
     }
 
