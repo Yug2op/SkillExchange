@@ -149,7 +149,7 @@ Backend/
    CLOUDINARY_API_SECRET=your-api-secret
    
    # Client Configuration
-   CLIENT_URL=http://localhost:3000
+   CLIENT_URL=http://localhost5173
    
    # OTP Configuration
    OTP_EXPIRE_MINUTES=10

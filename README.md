@@ -131,7 +131,7 @@ SkillExchange/
    ```
 
 4. **Access the Application**
-   - Frontend: `http://localhost:3000`
+   - Frontend: `http://localhost5173`
    - Backend API: `http://localhost:8080`
    - API Health Check: `http://localhost:8080/health`
 
@@ -162,7 +162,7 @@ CLOUDINARY_API_KEY=your-api-key
 CLOUDINARY_API_SECRET=your-api-secret
 
 # Client Configuration
-CLIENT_URL=http://localhost:3000
+CLIENT_URL=http://localhost5173
 ```
 
 ### Frontend (.env)

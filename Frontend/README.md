@@ -120,7 +120,7 @@ Frontend/
    ```
 
 5. **Open your browser**
-   Navigate to `http://localhost:3000` (or the port shown in terminal)
+   Navigate to `http://localhost5173` (or the port shown in terminal)
 
 ## 📜 Available Scripts
 
