@@ -8,7 +8,6 @@ import { toast } from 'sonner';
 
 // shadcn/ui components
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Label } from '@/components/ui/label';
@@ -39,17 +38,14 @@ import {
 import {
   ArrowLeft,
   Star,
-  MessageSquare,
-  User,
-  Award,
-  Target,
   Calendar,
   Edit,
   Trash2,
   Eye,
   EyeOff,
-  Save,
-  X
+  Award,
+  AlertCircle,
+  Loader2
 } from 'lucide-react';
 
 export default function ReviewDetailPage() {
@@ -72,7 +68,7 @@ export default function ReviewDetailPage() {
     isPublic: true
   });
 
-  // Get all given reviews to find the specific one
+  // Query configuration mirroring old dependencies exactly
   const { data: reviewsData, isLoading } = useQuery({
     queryKey: ['my-given-reviews'],
     queryFn: getMyGivenReviews,
@@ -80,9 +76,8 @@ export default function ReviewDetailPage() {
 
   const reviews = reviewsData?.data?.reviews || [];
   const review = reviews.find(r => r._id === id);
-  
 
-  // Edit review mutation
+  // Edit review mutation with parallel cache cleaning routes
   const editReviewMutation = useMutation({
     mutationFn: ({ id, data }) => updateReview(id, data),
     onSuccess: () => {
@@ -131,12 +126,10 @@ export default function ReviewDetailPage() {
 
   const handleEditSubmit = (e) => {
     e.preventDefault();
-
     if (editFormData.rating === 0) {
       toast.error('Please select a rating');
       return;
     }
-
     editReviewMutation.mutate({ id, data: editFormData });
   };
 
@@ -155,48 +148,36 @@ export default function ReviewDetailPage() {
   };
 
   const getRatingColor = (rating) => {
-    if (rating >= 4) return 'text-green-600';
-    if (rating >= 3) return 'text-yellow-600';
-    return 'text-red-600';
+    if (rating >= 4) return 'text-primary';
+    if (rating >= 3) return 'text-secondary';
+    return 'text-destructive';
   };
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900">
-        <div className="container mx-auto px-4 py-8">
-          <div className="max-w-2xl mx-auto">
-            <div className="animate-pulse space-y-6">
-              <div className="h-8 bg-gray-200 dark:bg-gray-700 rounded w-1/3"></div>
-              <div className="h-64 bg-gray-200 dark:bg-gray-700 rounded-lg"></div>
-            </div>
+      <div className="min-h-screen bg-background text-foreground flex items-center justify-center">
+            <BrandLoader/>
           </div>
-        </div>
-      </div>
     );
   }
 
   if (!review) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900">
-        <div className="container mx-auto px-4 py-8">
-          <motion.div
-            initial={{ scale: 0.9, opacity: 0 }}
-            animate={{ scale: 1, opacity: 1 }}
-            className="max-w-md mx-auto text-center"
-          >
-            <div className="h-16 w-16 text-red-500 mx-auto mb-4">⚠️</div>
-            <h2 className="text-2xl font-bold mb-2">Review Not Found</h2>
-            <p className="text-muted-foreground mb-6">
-              The review you're looking for doesn't exist or you don't have permission to view it.
+      <div className="min-h-screen bg-background text-foreground flex items-center justify-center px-6">
+        <motion.div initial={{ opacity: 0, scale: 0.98 }} animate={{ opacity: 1, scale: 1 }} className="text-center max-w-sm space-y-6">
+          <div className="h-12 w-12 rounded-full bg-destructive/10 text-destructive flex items-center justify-center mx-auto">
+            <AlertCircle className="h-5 w-5" />
+          </div>
+          <div className="space-y-1">
+            <h3 className="text-xl font-medium tracking-tight">Review Node Absent</h3>
+            <p className="text-sm text-muted-foreground/80 font-light leading-relaxed">
+              The targeted index entry cannot be found or your active workspace identity lacks necessary parameters to view it.
             </p>
-            <Button asChild>
-              <Link to="/reviews">
-                <ArrowLeft className="mr-2 h-4 w-4" />
-                Back to Reviews
-              </Link>
-            </Button>
-          </motion.div>
-        </div>
+          </div>
+          <Button asChild className="w-full text-xs uppercase tracking-widest font-medium py-5 rounded-lg bg-foreground text-background">
+            <Link to="/reviews"><ArrowLeft className="mr-2 h-3.5 w-3.5" /> Return to Evaluations</Link>
+          </Button>
+        </motion.div>
       </div>
     );
   }
@@ -204,276 +185,215 @@ export default function ReviewDetailPage() {
   const isMyReview = review.reviewer?._id === currentUserId;
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900">
-      <div className="container mx-auto px-4 py-8">
-        <div className="max-w-2xl mx-auto space-y-8">
-          {/* Header */}
-          <motion.div
-            initial={{ y: -20, opacity: 0 }}
-            animate={{ y: 0, opacity: 1 }}
-            className="flex items-center justify-between"
-          >
-            <div className="flex items-center gap-4">
-              <Button variant="outline" size="sm" asChild>
-                <Link to="/reviews">
-                  <ArrowLeft className="h-4 w-4 mr-2" />
-                  Back to Reviews
-                </Link>
+    <div className="min-h-screen bg-background text-foreground antialiased selection:bg-primary/20 transition-colors duration-300">
+      <div className="max-w-2xl mx-auto px-6 py-16 space-y-12">
+        
+        {/* INTERFACE BREADCRUMB HEADER MODULE */}
+        <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-6">
+          <div className="space-y-4">
+            <Button variant="ghost" size="sm" asChild className="text-xs uppercase tracking-widest font-medium h-9 px-3 -ml-3 hover:bg-muted/60">
+              <Link to="/reviews">
+                <ArrowLeft className="h-3.5 w-3.5 mr-2" /> Back to Reviews
+              </Link>
+            </Button>
+            <div className="pt-1">
+              <h1 className="text-4xl font-light tracking-tighter leading-none">Evaluation Logs.</h1>
+              <p className="text-sm text-muted-foreground font-light mt-3">
+                Review context linked with <span className="font-medium text-foreground">{review.reviewee?.name}</span>
+              </p>
+            </div>
+          </div>
+
+          {/* EDIT/DELETE OWNER CONTROL ACTION CONTAINER */}
+          {isMyReview && (
+            <div className="flex items-center gap-3 self-start sm:self-auto">
+              <Button variant="ghost" size="sm" onClick={handleEdit} className="text-xs uppercase tracking-widest font-medium h-10 px-4 border border-border/40 hover:bg-muted/60 rounded-lg gap-2">
+                <Edit className="h-3.5 w-3.5" /> Edit
               </Button>
-              <div>
-                <h1 className="text-2xl font-bold">Review Details</h1>
-                <p className="text-muted-foreground">
-                  Review for {review.reviewee?.name}
-                </p>
+              
+              <AlertDialog>
+                <AlertDialogTrigger asChild>
+                  <Button variant="ghost" size="sm" className="text-xs uppercase tracking-widest font-medium h-10 px-4 border border-destructive/20 text-destructive hover:bg-destructive/10 rounded-lg gap-2">
+                    <Trash2 className="h-3.5 w-3.5" /> Delete
+                  </Button>
+                </AlertDialogTrigger>
+                <AlertDialogContent className="bg-card border border-border/40 max-w-md rounded-xl">
+                  <AlertDialogHeader className="text-left">
+                    <AlertDialogTitle className="text-lg font-medium tracking-tight">Delete Review</AlertDialogTitle>
+                    <AlertDialogDescription className="text-xs text-muted-foreground font-light leading-relaxed">
+                      Are you sure you want to purge this record form the central indices? This action cannot be reverted.
+                    </AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <AlertDialogFooter className="pt-2">
+                    <AlertDialogCancel className="text-xs uppercase tracking-wider font-medium h-10 rounded-lg">Cancel</AlertDialogCancel>
+                    <AlertDialogAction onClick={handleDelete} className="text-xs uppercase tracking-wider font-medium h-10 bg-destructive text-destructive-foreground hover:opacity-90 rounded-lg">
+                      Purge Evaluation Node
+                    </AlertDialogAction>
+                  </AlertDialogFooter>
+                </AlertDialogContent>
+              </AlertDialog>
+            </div>
+          )}
+        </motion.div>
+
+        {/* COMPREHENSIVE VIEW DETAILED CARD EMBED */}
+        <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.05 }} className="space-y-10">
+          <div className="border border-border/30 bg-card rounded-2xl p-6 md:p-8 space-y-8 shadow-sm">
+            
+            {/* SUB-HEADER USER INTERACTION FOOTPRINT */}
+            <div className="flex flex-col sm:flex-row gap-4 justify-between sm:items-center pb-6 border-b border-border/20">
+              <div className="flex items-center gap-4">
+                <Avatar className="h-12 w-12 filter grayscale contrast-125 rounded-full ring-1 ring-border/40">
+                  <AvatarImage src={review.reviewee?.profilePic?.url || `https://ui-avatars.com/api/?name=${review.reviewee?.name || 'U'}&background=random`} alt={review.reviewee?.name} />
+                  <AvatarFallback className="text-sm font-medium bg-muted">{review.reviewee?.name?.[0]}</AvatarFallback>
+                </Avatar>
+                
+                <div className="space-y-1">
+                  <div className="flex items-center gap-3 flex-wrap">
+                    <h3 className="text-base font-medium tracking-tight text-foreground">Review for {review.reviewee?.name}</h3>
+                    <Badge variant="outline" className="text-[9px] uppercase font-mono tracking-widest border-border/60 text-muted-foreground gap-1.5 py-0.5 px-2">
+                      {review.isPublic ? <><Eye className="h-2.5 w-2.5" /> Public</> : <><EyeOff className="h-2.5 w-2.5" /> Private</>}
+                    </Badge>
+                  </div>
+                  <div className="text-xs text-muted-foreground/60 font-mono uppercase tracking-wider flex items-center gap-1.5">
+                    <Calendar className="h-3 w-3" /> {formatDate(review.createdAt)}
+                  </div>
+                </div>
               </div>
             </div>
 
-            {isMyReview && (
-              <div className="flex gap-2">
-                <Button variant="outline" size="sm" onClick={handleEdit}>
-                  <Edit className="h-4 w-4 mr-2" />
-                  Edit
-                </Button>
-                <AlertDialog>
-                  <AlertDialogTrigger asChild>
-                    <Button variant="outline" size="sm">
-                      <Trash2 className="h-4 w-4 mr-2" />
-                      Delete
-                    </Button>
-                  </AlertDialogTrigger>
-                  <AlertDialogContent>
-                    <AlertDialogHeader>
-                      <AlertDialogTitle>Delete Review</AlertDialogTitle>
-                      <AlertDialogDescription>
-                        Are you sure you want to delete this review? This action cannot be undone.
-                      </AlertDialogDescription>
-                    </AlertDialogHeader>
-                    <AlertDialogFooter>
-                      <AlertDialogCancel>Cancel</AlertDialogCancel>
-                      <AlertDialogAction
-                        onClick={handleDelete}
-                        className="bg-red-600 hover:bg-red-700"
-                      >
-                        Delete Review
-                      </AlertDialogAction>
-                    </AlertDialogFooter>
-                  </AlertDialogContent>
-                </AlertDialog>
+            {/* WEIGHTED STAR OVERALL RATING FEED */}
+            <div className="space-y-2">
+              <Label className="text-xs uppercase tracking-widest text-muted-foreground/80 font-mono font-medium block">Overall Performance</Label>
+              <div className="flex items-center gap-4">
+                <div className="flex items-center gap-0.5">
+                  {[1, 2, 3, 4, 5].map((rating) => (
+                    <Star key={rating} className={`h-5 w-5 ${rating <= review.rating ? 'fill-secondary text-secondary' : 'text-border/60'}`} />
+                  ))}
+                </div>
+                <span className={`text-base font-medium font-mono ${getRatingColor(review.rating)}`}>
+                  {review.rating}.0 / 5.0
+                </span>
+              </div>
+            </div>
+
+            {/* TRANSACTION EXCHANGES REFERENCE ROW */}
+            {review.exchange && (
+              <div className="space-y-3 pt-6 border-t border-border/20">
+                <Label className="text-xs uppercase tracking-widest text-muted-foreground/80 font-mono font-medium flex items-center gap-1.5">
+                  <Award className="h-4 w-4 text-primary" /> Exchange Context Mappings
+                </Label>
+                <div className="p-4 bg-background border border-border/30 rounded-xl grid grid-cols-2 gap-6 text-xs font-light">
+                  <div className="space-y-0.5">
+                    <div className="text-muted-foreground/60 font-mono uppercase tracking-wider text-[10px]">Skill Requested</div>
+                    <div className="font-medium text-foreground">{review.exchange.skillRequested}</div>
+                  </div>
+                  <div className="space-y-0.5">
+                    <div className="text-muted-foreground/60 font-mono uppercase tracking-wider text-[10px]">Skill Offered</div>
+                    <div className="font-medium text-foreground">{review.exchange.skillOffered}</div>
+                  </div>
+                </div>
               </div>
             )}
-          </motion.div>
 
-          {/* Review Card */}
-          <motion.div
-            initial={{ y: 20, opacity: 0 }}
-            animate={{ y: 0, opacity: 1 }}
-            transition={{ delay: 0.1 }}
-          >
-            <Card>
-              <CardHeader>
-                <div className="flex items-start gap-4">
-                  <Avatar className="h-12 w-12">
-                    <AvatarImage src={review.reviewee?.profilePic?.url || `https://ui-avatars.com/api/?name=${review.reviewee?.name || 'U'}&background=random`} alt={review.reviewee?.name} loading="lazy" />
-                    <AvatarFallback className="bg-gradient-to-br from-blue-500 to-purple-600 text-white">
-                      {review.reviewee?.name?.[0]?.toUpperCase() || 'U'}
-                    </AvatarFallback>
-                  </Avatar>
-
-                  <div className="flex-1">
-                    <CardTitle className="flex items-center gap-2">
-                      Review for {review.reviewee?.name}
-                      <Badge variant={review.isPublic ? 'default' : 'secondary'}>
-                        {review.isPublic ? (
-                          <>
-                            <Eye className="h-3 w-3 mr-1" />
-                            Public
-                          </>
-                        ) : (
-                          <>
-                            <EyeOff className="h-3 w-3 mr-1" />
-                            Private
-                          </>
-                        )}
-                      </Badge>
-                    </CardTitle>
-                    <CardDescription className="flex items-center gap-2 mt-1">
-                      <Calendar className="h-4 w-4" />
-                      {formatDate(review.createdAt)}
-                    </CardDescription>
-                  </div>
-                </div>
-              </CardHeader>
-
-              <CardContent className="space-y-6">
-                {/* Overall Rating */}
-                <div className="space-y-3">
-                  <Label className="text-base font-medium">Overall Rating</Label>
-                  <div className="flex items-center gap-2">
-                    <div className="flex items-center gap-1">
-                      {[1, 2, 3, 4, 5].map((rating) => (
-                        <Star
-                          key={rating}
-                          className={`h-6 w-6 ${
-                            rating <= review.rating
-                              ? 'fill-yellow-400 text-yellow-400'
-                              : 'text-gray-300'
-                          }`}
-                        />
-                      ))}
-                    </div>
-                    <span className={`text-lg font-semibold ${getRatingColor(review.rating)}`}>
-                      {review.rating}/5
-                    </span>
-                  </div>
-                </div>
-
-                {/* Exchange Context */}
-                {review.exchange && (
-                  <div className="space-y-3">
-                    <Label className="text-base font-medium">Exchange Details</Label>
-                    <div className="p-4 bg-muted/50 rounded-lg">
-                      <div className="grid grid-cols-2 gap-4">
-                        <div>
-                          <div className="text-sm font-medium text-muted-foreground">Skill Requested</div>
-                          <div className="font-medium">{review.exchange.skillRequested}</div>
-                        </div>
-                        <div>
-                          <div className="text-sm font-medium text-muted-foreground">Skill Offered</div>
-                          <div className="font-medium">{review.exchange.skillOffered}</div>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                )}
-
-                {/* Aspect Ratings */}
-                {review.aspectRatings && (
-                  <div className="space-y-3">
-                    <Label className="text-base font-medium">Detailed Ratings</Label>
-                    <div className="grid gap-4 sm:grid-cols-2">
-                      {[
-                        { key: 'communication', label: 'Communication' },
-                        { key: 'knowledge', label: 'Knowledge & Expertise' },
-                        { key: 'punctuality', label: 'Punctuality' },
-                        { key: 'patience', label: 'Patience & Teaching Style' }
-                      ].map(({ key, label }) => (
-                        <div key={key} className="space-y-2">
-                          <Label className="text-sm">{label}</Label>
-                          <div className="flex items-center gap-2">
-                            {[1, 2, 3, 4, 5].map((rating) => (
-                              <div
-                                key={rating}
-                                className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-medium ${
-                                  rating <= review.aspectRatings[key]
-                                    ? 'bg-yellow-400 text-white'
-                                    : 'bg-gray-200 text-gray-600'
-                                }`}
-                              >
-                                {rating}
-                              </div>
-                            ))}
+            {/* SEGMENTED DETAILED CRITERIA MATRIX CHIPS */}
+            {review.aspectRatings && (
+              <div className="space-y-4 pt-6 border-t border-border/20">
+                <Label className="text-xs uppercase tracking-widest text-muted-foreground/80 font-mono font-medium block">Detailed Vectors</Label>
+                <div className="grid gap-4 sm:grid-cols-2">
+                  {[
+                    { key: 'communication', label: 'Communication' },
+                    { key: 'knowledge', label: 'Knowledge & Expertise' },
+                    { key: 'punctuality', label: 'Punctuality' },
+                    { key: 'patience', label: 'Patience & Teaching Style' }
+                  ].map(({ key, label }) => (
+                    <div key={key} className="p-4 border border-border/30 bg-card/40 rounded-xl flex items-center justify-between gap-4">
+                      <span className="text-xs font-light text-foreground/80">{label}</span>
+                      <div className="flex items-center gap-1 shrink-0">
+                        {[1, 2, 3, 4, 5].map((rating) => (
+                          <div
+                            key={rating}
+                            className={`h-5 w-5 font-mono text-[9px] font-medium rounded flex items-center justify-center border ${
+                              rating <= review.aspectRatings[key]
+                                ? 'bg-foreground text-background border-foreground'
+                                : 'text-muted-foreground/40 border-border/40'
+                            }`}
+                          >
+                            {rating}
                           </div>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
-
-                {/* Skill Taught */}
-                {review.skillTaught && (
-                  <div className="space-y-2">
-                    <Label className="text-base font-medium">Skill Learned</Label>
-                    <div className="p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
-                      <p className="text-sm">{review.skillTaught}</p>
-                    </div>
-                  </div>
-                )}
-
-                {/* Feedback */}
-                {review.feedback && (
-                  <div className="space-y-2">
-                    <Label className="text-base font-medium">Feedback</Label>
-                    <div className="p-4 bg-muted/50 rounded-lg">
-                      <p className="text-sm leading-relaxed">{review.feedback}</p>
-                    </div>
-                  </div>
-                )}
-
-                {/* Reviewer Info */}
-                <div className="pt-4 border-t">
-                  <div className="flex items-center gap-3">
-                    <Avatar className="h-8 w-8">
-                      <AvatarImage src={review.reviewer?.profilePic?.url || `https://ui-avatars.com/api/?name=${review.reviewee?.name || 'U'}&background=random`} alt={review.reviewer?.name} loading="lazy"/>
-                      <AvatarFallback className="bg-gradient-to-br from-purple-500 to-pink-600 text-white text-xs">
-                        {review.reviewer?.name?.[0]?.toUpperCase() || 'U'}
-                      </AvatarFallback>
-                    </Avatar>
-                    <div>
-                      <div className="text-sm font-medium">Reviewed by {review.reviewer?.name}</div>
-                      <div className="text-xs text-muted-foreground">
-                        {isMyReview ? 'You' : 'Other user'}
+                        ))}
                       </div>
                     </div>
-                  </div>
+                  ))}
                 </div>
-              </CardContent>
-            </Card>
-          </motion.div>
-        </div>
+              </div>
+            )}
+
+            {/* TEXT INLINE SPECIFIC FIELD BLOCKS */}
+            {review.skillTaught && (
+              <div className="space-y-2 pt-6 border-t border-border/20">
+                <Label className="text-xs uppercase tracking-widest text-muted-foreground/80 font-mono font-medium block">Skill Matrix Component Learned</Label>
+                <div className="text-sm font-light text-foreground/90 pl-1">{review.skillTaught}</div>
+              </div>
+            )}
+
+            {review.feedback && (
+              <div className="space-y-2 pt-6 border-t border-border/20">
+                <Label className="text-xs uppercase tracking-widest text-muted-foreground/80 font-mono font-medium block">Log Summary Feedback</Label>
+                <p className="text-sm text-muted-foreground/90 font-light leading-relaxed bg-background border border-border/30 rounded-xl p-4 italic">
+                  "{review.feedback}"
+                </p>
+              </div>
+            )}
+
+            {/* LOWER BOUND ATTRIBUTION METADATA CARD FOOTPRINT */}
+            <div className="pt-6 border-t border-border/20 flex items-center justify-between">
+              <div className="flex items-center gap-2.5 text-xs font-light text-muted-foreground">
+                <Avatar className="h-6 w-6 filter grayscale rounded-full ring-1 ring-border/20">
+                  <AvatarImage src={review.reviewer?.profilePic?.url} />
+                  <AvatarFallback className="text-[10px] font-mono">{review.reviewer?.name?.charAt(0)}</AvatarFallback>
+                </Avatar>
+                <span>Logged by <span className="font-medium text-foreground">{review.reviewer?.name}</span> ({isMyReview ? 'Self Workspace' : 'External Core'})</span>
+              </div>
+            </div>
+
+          </div>
+        </motion.div>
       </div>
 
-      {/* Edit Review Dialog */}
+      {/* FLOW EDITOR DIALOG INTERFACE BLOCK MODAL */}
       <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
-        <DialogContent className="sm:max-w-lg">
-          <DialogHeader>
-            <DialogTitle>Edit Review</DialogTitle>
-            <DialogDescription>
-              Update your review for {review.reviewee?.name}
+        <DialogContent className="w-full sm:max-w-lg bg-card text-foreground border-border/40 rounded-xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader className="text-left">
+            <DialogTitle className="text-lg font-medium tracking-tight">Edit Review</DialogTitle>
+            <DialogDescription className="text-xs text-muted-foreground font-light leading-relaxed">
+              Modify custom parameter scores and transaction logs linked with this profile entry.
             </DialogDescription>
           </DialogHeader>
 
-          <form onSubmit={handleEditSubmit} className="space-y-4">
-            {/* Overall Rating */}
+          <form onSubmit={handleEditSubmit} className="space-y-8 pt-2">
+            
+            {/* INTERACTIVE EDIT STAR ROW LAYER */}
             <div className="space-y-2">
-              <Label>Overall Rating *</Label>
-              <div className="flex items-center gap-2">
+              <Label className="text-xs uppercase tracking-widest text-muted-foreground/80 font-mono font-medium">Overall Performance *</Label>
+              <div className="flex items-center gap-1">
                 {[1, 2, 3, 4, 5].map((rating) => (
                   <button
                     key={rating}
                     type="button"
                     onClick={() => setEditFormData(prev => ({ ...prev, rating }))}
-                    className="p-1 hover:scale-110 transition-transform"
+                    className="p-1 hover:scale-110 transition-transform outline-none"
                   >
-                    <Star
-                      className={`h-6 w-6 ${
-                        rating <= editFormData.rating
-                          ? 'fill-yellow-400 text-yellow-400'
-                          : 'text-gray-300 hover:text-yellow-300'
-                      }`}
-                    />
+                    <Star className={`h-6 w-6 transition-colors ${rating <= editFormData.rating ? 'fill-secondary text-secondary' : 'text-border/60'}`} />
                   </button>
                 ))}
-                <span className="ml-2 text-sm text-muted-foreground">
-                  {editFormData.rating > 0 ? `${editFormData.rating} stars` : 'Select rating'}
-                </span>
+                <span className="ml-3 text-xs font-mono text-muted-foreground font-light">{editFormData.rating} / 5</span>
               </div>
             </div>
 
-            {/* Feedback */}
-            <div className="space-y-2">
-              <Label htmlFor="edit-feedback">Feedback</Label>
-              <Textarea
-                id="edit-feedback"
-                value={editFormData.feedback}
-                onChange={(e) => setEditFormData(prev => ({ ...prev, feedback: e.target.value }))}
-                placeholder="Update your feedback..."
-                rows={3}
-              />
-            </div>
-
-            {/* Aspect Ratings - ADD THIS SECTION */}
-            <div className="space-y-4">
-              <Label className="text-base font-medium">Detailed Ratings</Label>
+            {/* MULTI ASPECT FORM UPDATES SLOTS */}
+            <div className="space-y-4 pt-2 border-t border-border/20">
+              <Label className="text-xs uppercase tracking-widest text-muted-foreground/80 font-mono font-medium block">Detailed Ratings</Label>
               <div className="grid gap-4 sm:grid-cols-2">
                 {[
                   { key: 'communication', label: 'Communication' },
@@ -481,27 +401,24 @@ export default function ReviewDetailPage() {
                   { key: 'punctuality', label: 'Punctuality' },
                   { key: 'patience', label: 'Patience & Teaching Style' }
                 ].map(({ key, label }) => (
-                  <div key={key} className="space-y-2">
-                    <Label className="text-sm">{label}</Label>
-                    <div className="flex items-center gap-2">
+                  <div key={key} className="space-y-2 p-3 border border-border/30 bg-background/50 rounded-xl flex items-center justify-between gap-4">
+                    <Label className="text-xs font-light text-foreground/80">{label}</Label>
+                    <div className="flex items-center gap-1 shrink-0">
                       {[1, 2, 3, 4, 5].map((rating) => (
                         <button
                           key={rating}
                           type="button"
                           onClick={() => setEditFormData(prev => ({
                             ...prev,
-                            aspectRatings: {
-                              ...prev.aspectRatings,
-                              [key]: rating
-                            }
+                            aspectRatings: { ...prev.aspectRatings, [key]: rating }
                           }))}
-                          className={`p-1 rounded ${
+                          className={`h-6 w-6 font-mono text-[10px] font-medium rounded border transition-all ${
                             rating <= editFormData.aspectRatings[key]
-                              ? 'bg-yellow-400 text-white'
-                              : 'bg-gray-200 hover:bg-gray-300'
+                              ? 'bg-foreground text-background border-foreground'
+                              : 'bg-transparent text-muted-foreground border-border/40 hover:border-foreground/20'
                           }`}
                         >
-                          <span className="text-xs font-medium">{rating}</span>
+                          {rating}
                         </button>
                       ))}
                     </div>
@@ -510,45 +427,55 @@ export default function ReviewDetailPage() {
               </div>
             </div>
 
-            {/* Privacy Setting */}
-            <div className="space-y-2">
-              <Label>Privacy Setting</Label>
+            {/* TEXT CONTEXT TEXTAREA EDIT AREA */}
+            <div className="space-y-2 pt-2 border-t border-border/20">
+              <Label htmlFor="edit-feedback" className="text-xs uppercase tracking-widest text-muted-foreground/80 font-mono font-medium">Feedback Text</Label>
+              <div className="border border-border/40 focus-within:border-foreground/60 rounded-xl p-3 bg-background">
+                <Textarea
+                  id="edit-feedback"
+                  value={editFormData.feedback}
+                  onChange={(e) => setEditFormData(prev => ({ ...prev, feedback: e.target.value }))}
+                  placeholder="Update your descriptive feedback logs..."
+                  rows={3}
+                  maxLength={500}
+                  className="resize-none border-0 bg-transparent p-0 focus-visible:ring-0 focus-visible:ring-offset-0 placeholder:text-muted-foreground/30 font-light text-sm shadow-none"
+                />
+              </div>
+            </div>
+
+            {/* MODAL CONTROL PRIVACY RADIOS */}
+            <div className="space-y-3 pt-2 border-t border-border/20">
+              <Label className="text-xs uppercase tracking-widest text-muted-foreground/80 font-mono font-medium block">Privacy Settings</Label>
               <RadioGroup
                 value={editFormData.isPublic ? 'public' : 'private'}
                 onValueChange={(value) => setEditFormData(prev => ({ ...prev, isPublic: value === 'public' }))}
+                className="gap-2.5"
               >
-                <div className="flex items-center space-x-2">
-                  <RadioGroupItem value="public" id="edit-public" />
-                  <Label htmlFor="edit-public" className="flex items-center gap-2">
-                    <Eye className="h-4 w-4" />
-                    Public
+                <div className="flex items-center space-x-2.5 cursor-pointer group">
+                  <RadioGroupItem value="public" id="edit-public" className="data-[state=checked]:bg-primary" />
+                  <Label htmlFor="edit-public" className="flex items-center gap-1.5 text-xs font-light text-muted-foreground group-hover:text-foreground cursor-pointer transition-colors">
+                    <Eye className="h-3.5 w-3.5 text-primary stroke-[1.5]" /> Public Group Listing
                   </Label>
                 </div>
-                <div className="flex items-center space-x-2">
-                  <RadioGroupItem value="private" id="edit-private" />
-                  <Label htmlFor="edit-private" className="flex items-center gap-2">
-                    <EyeOff className="h-4 w-4" />
-                    Private
+                <div className="flex items-center space-x-2.5 cursor-pointer group">
+                  <RadioGroupItem value="private" id="edit-private" className="data-[state=checked]:bg-primary" />
+                  <Label htmlFor="edit-private" className="flex items-center gap-1.5 text-xs font-light text-muted-foreground group-hover:text-foreground cursor-pointer transition-colors">
+                    <EyeOff className="h-3.5 w-3.5 text-muted-foreground stroke-[1.5]" /> Private Isolated View
                   </Label>
                 </div>
               </RadioGroup>
             </div>
 
-            <DialogFooter>
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => setIsEditDialogOpen(false)}
-              >
+            {/* ACTION FOOTER SUBMITS LAYERS */}
+            <DialogFooter className="gap-2 pt-4 border-t border-border/20">
+              <Button type="button" variant="ghost" onClick={() => setIsEditDialogOpen(false)} className="text-xs uppercase tracking-widest font-medium h-10 px-4 border border-border/40 hover:bg-muted/60 rounded-lg">
                 Cancel
               </Button>
-              <Button
-                type="submit"
-                disabled={editReviewMutation.isPending}
-              >
-                {editReviewMutation.isPending ? 'Saving...' : 'Save Changes'}
+              <Button type="submit" disabled={editReviewMutation.isPending} className="text-xs uppercase tracking-widest font-medium h-10 px-5 rounded-lg bg-foreground text-background hover:opacity-90 transition-opacity">
+                {editReviewMutation.isPending ? 'Saving Vector Changes...' : 'Save Configuration Changes'}
               </Button>
             </DialogFooter>
+
           </form>
         </DialogContent>
       </Dialog>

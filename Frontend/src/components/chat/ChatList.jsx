@@ -188,10 +188,9 @@ const ChatList = ({ onChatSelect, selectedChatId, state, actions }) => {
 
       {/* Loading State */}
       {state.loadingChats && (
-        <div className="flex flex-col items-center justify-center py-8 sm:py-12 px-4">
-          <Loader2 className="w-6 h-6 sm:w-8 sm:h-8 animate-spin text-primary mb-3" />
-          <p className="text-sm sm:text-base text-muted-foreground">Loading conversations...</p>
-        </div>
+        <div className="min-h-screen bg-background text-foreground flex items-center justify-center">
+              <BrandLoader/>
+            </div>
       )}
 
       {/* Chat List */}
@@ -301,10 +300,9 @@ const ChatList = ({ onChatSelect, selectedChatId, state, actions }) => {
             variant="outline"
           >
             {state.loadingChats ? (
-              <>
-                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                Loading...
-              </>
+              <div className="min-h-screen bg-background text-foreground flex items-center justify-center">
+                    <BrandLoader/>
+                  </div>
             ) : (
               'Load More'
             )}

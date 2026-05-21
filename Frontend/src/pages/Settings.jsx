@@ -11,14 +11,10 @@ import { updateUser } from '@/api/UserApi';
 
 // shadcn/ui components
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Label } from '@/components/ui/label';
-import { Input } from '@/components/ui/input';
-import { Textarea } from '@/components/ui/textarea';
 import { Switch } from '@/components/ui/switch';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import {
   AlertDialog,
@@ -35,7 +31,6 @@ import {
   Dialog,
   DialogContent,
   DialogDescription,
-  DialogFooter,
   DialogHeader,
   DialogTitle,
   DialogTrigger,
@@ -51,20 +46,13 @@ import {
   Sun,
   Trash2,
   Edit3,
-  Calendar,
   Clock,
   CheckCircle2,
   AlertCircle,
   Settings as SettingsIcon,
-  Eye,
-  EyeOff,
-  Palette,
-  Smartphone,
   Monitor,
-  Globe,
   Lock,
-  Key,
-  Plus
+  Key
 } from 'lucide-react';
 
 export default function Settings() {
@@ -133,37 +121,34 @@ export default function Settings() {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900 p-6">
-        <div className="animate-pulse space-y-6">
-          <div className="h-8 bg-gray-200 dark:bg-gray-700 rounded w-1/3"></div>
-          <div className="grid gap-6 md:grid-cols-3">
-            <div className="md:col-span-2 h-96 bg-gray-200 dark:bg-gray-700 rounded-lg"></div>
-            <div className="h-96 bg-gray-200 dark:bg-gray-700 rounded-lg"></div>
+      <div className="min-h-screen bg-background text-foreground flex items-center justify-center">
+            <BrandLoader/>
           </div>
-        </div>
-      </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900 p-6">
-      <div className="max-w-4xl mx-auto space-y-8">
-        {/* Header */}
+    <div className="min-h-screen bg-background text-foreground antialiased selection:bg-primary/20 transition-colors duration-300">
+      <div className="max-w-3xl mx-auto px-6 py-16 space-y-12">
+        
+        {/* INTERFACE HEADLINE LAYER */}
         <motion.div
-          initial={{ opacity: 0, y: 20 }}
+          initial={{ opacity: 0, y: -10 }}
           animate={{ opacity: 1, y: 0 }}
-          className="flex items-center gap-4"
+          transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
+          className="space-y-4"
         >
-          <Button variant="outline" size="sm" onClick={() => navigate('/me')}>
+          <Button variant="ghost" size="sm" onClick={() => navigate('/me')} className="text-xs uppercase tracking-widest font-medium h-9 px-3 -ml-3 hover:bg-muted/60">
             ← Back to Profile
           </Button>
-          <div>
-            <h1 className="text-3xl font-bold">Settings</h1>
-            <p className="text-muted-foreground">Manage your account preferences and privacy</p>
+          <div className="pt-2">
+            <h1 className="text-4xl font-light tracking-tighter leading-none">Settings.</h1>
+            <p className="text-xs font-mono uppercase tracking-widest text-muted-foreground/60 mt-3">Manage your account preferences and privacy</p>
           </div>
         </motion.div>
 
-        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+        {/* CONTROLS PLAIN NAVIGATION TABS SYSTEM */}
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full space-y-10">
           <TabsList className="grid w-full grid-cols-5">
             <TabsTrigger value="profile" className="gap-2">
               <User className="h-4 w-4" />
@@ -187,321 +172,252 @@ export default function Settings() {
             </TabsTrigger>
           </TabsList>
 
-          {/* Profile Tab */}
-          <TabsContent value="profile" className="space-y-6">
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <User className="h-5 w-5" />
-                  Profile Information
-                </CardTitle>
-                <CardDescription>Manage your basic profile information</CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
+          {/* 1. PROFILE INFORMATION LAYERS */}
+          <TabsContent value="profile" className="space-y-12 outline-none">
+            <div className="border border-border/30 bg-card rounded-2xl p-6 md:p-8 space-y-6">
+              <div className="flex flex-col sm:flex-row gap-6 sm:items-center justify-between pb-6 border-b border-border/20">
                 <div className="flex items-center gap-4">
-                  <Avatar className="h-16 w-16">
-                    <AvatarImage src={user?.profilePic?.url || `https://ui-avatars.com/api/?name=${user?.name || 'U'}&background=random`} alt={user?.name} loading="lazy" />
-                    <AvatarFallback className="bg-gradient-to-br from-blue-500 to-purple-600 text-white text-xl">
-                      {user?.name?.[0]?.toUpperCase() || 'U'}
-                    </AvatarFallback>
+                  <Avatar className="h-14 w-14 rounded-full ring-1 ring-border/40">
+                    <AvatarImage src={user?.profilePic?.url || `https://ui-avatars.com/api/?name=${user?.name || 'U'}&background=random`} alt={user?.name} />
+                    <AvatarFallback className="text-sm font-medium bg-muted">{user?.name?.[0]}</AvatarFallback>
                   </Avatar>
-                  <div className="flex-1">
-                    <h3 className="font-semibold">{user?.name}</h3>
-                    <p className="text-sm text-muted-foreground">{user?.email}</p>
-                    <div className="flex items-center gap-2 mt-1">
-                      {user?.isEmailVerified ? (
-                        <Badge variant="default" className="gap-1">
-                          <CheckCircle2 className="h-3 w-3" />
-                          Verified
-                        </Badge>
-                      ) : (
-                        <Badge variant="destructive" className="gap-1">
-                          <AlertCircle className="h-3 w-3" />
-                          Unverified
-                        </Badge>
-                      )}
-                    </div>
+                  <div className="space-y-1">
+                    <h3 className="text-base font-medium tracking-tight text-foreground">{user?.name}</h3>
+                    <p className="text-xs text-muted-foreground font-light">{user?.email}</p>
                   </div>
-                  <Button variant="outline" onClick={() => navigate('/profile/edit')}>
-                    <Edit3 className="h-4 w-4 mr-2" />
-                    Edit Profile
-                  </Button>
                 </div>
-              </CardContent>
-            </Card>
 
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Mail className="h-5 w-5" />
-                  Email Verification
-                </CardTitle>
-                <CardDescription>Verify your email address for account security</CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="font-medium">{user?.email}</p>
-                    <p className="text-sm text-muted-foreground">
-                      {user?.isEmailVerified ? 'Email verified' : 'Email not verified'}
-                    </p>
-                  </div>
-                  {!user?.isEmailVerified && (
-                    <Button
-                      onClick={() => verifyEmailMutation.mutate()}
-                      disabled={verifyEmailMutation.isPending}
-                    >
-                      {verifyEmailMutation.isPending ? 'Sending...' : 'Resend Verification'}
-                    </Button>
+                <div className="flex items-center gap-3">
+                  {user?.isEmailVerified ? (
+                    <Badge variant="outline" className="text-[10px] uppercase font-mono tracking-widest border-primary/20 text-primary bg-primary/5 gap-1 py-1 px-2.5">
+                      <CheckCircle2 className="h-2.5 w-2.5" /> Verified
+                    </Badge>
+                  ) : (
+                    <Badge variant="outline" className="text-[10px] uppercase font-mono tracking-widest border-destructive/20 text-destructive bg-destructive/5 gap-1 py-1 px-2.5">
+                      <AlertCircle className="h-2.5 w-2.5" /> Unverified
+                    </Badge>
                   )}
-                </div>
-              </CardContent>
-            </Card>
-          </TabsContent>
-
-          {/* Security Tab */}
-          <TabsContent value="security" className="space-y-6">
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Lock className="h-5 w-5" />
-                  Password & Security
-                </CardTitle>
-                <CardDescription>Manage your password and security settings</CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 bg-blue-100 dark:bg-blue-900/30 rounded-full flex items-center justify-center">
-                      <Key className="h-5 w-5 text-blue-600 dark:text-blue-400" />
-                    </div>
-                    <div>
-                      <p className="font-medium">Change Password</p>
-                      <p className="text-sm text-muted-foreground">
-                        Update your account password regularly for better security
-                      </p>
-                    </div>
-                  </div>
-                  <Dialog open={showChangePassword} onOpenChange={setShowChangePassword}>
-                    <DialogTrigger asChild>
-                      <Button variant="outline" className="gap-2">
-                        <Key className="h-4 w-4" />
-                        Change Password
-                      </Button>
-                    </DialogTrigger>
-                    <DialogContent className="max-w-md">
-                      <DialogHeader>
-                        <DialogTitle>Change Password</DialogTitle>
-                        <DialogDescription>
-                          Enter your current password and choose a new secure password.
-                        </DialogDescription>
-                      </DialogHeader>
-                      <ChangePassword />
-                    </DialogContent>
-                  </Dialog>
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Shield className="h-5 w-5" />
-                  Two-Factor Authentication
-                </CardTitle>
-                <CardDescription>Add an extra layer of security to your account</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="text-center py-8 text-muted-foreground">
-                  <Shield className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                  <p className="mb-4">Two-factor authentication coming soon!</p>
-                  <Button variant="outline" disabled>
-                    <Smartphone className="h-4 w-4 mr-2" />
-                    Enable 2FA
+                  <Button variant="ghost" onClick={() => navigate('/profile/edit')} className="text-xs uppercase tracking-widest font-medium h-10 px-4 border border-border/40 hover:bg-muted/60 rounded-lg gap-2">
+                    <Edit3 className="h-3.5 w-3.5" /> Edit Profile
                   </Button>
                 </div>
-              </CardContent>
-            </Card>
+              </div>
+
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pt-2">
+                <div className="space-y-0.5">
+                  <h4 className="text-sm font-medium tracking-tight">Email Verification</h4>
+                  <p className="text-xs text-muted-foreground font-light">Verify your email address for account security parameters.</p>
+                </div>
+                {!user?.isEmailVerified && (
+                  <Button
+                    onClick={() => verifyEmailMutation.mutate()}
+                    disabled={verifyEmailMutation.isPending}
+                    className="text-xs uppercase tracking-widest font-medium h-10 px-5 rounded-lg bg-foreground text-background hover:opacity-90"
+                  >
+                    {verifyEmailMutation.isPending ? 'Sending...' : 'Resend Verification'}
+                  </Button>
+                )}
+              </div>
+            </div>
           </TabsContent>
 
-          {/* Privacy Tab */}
-          <TabsContent value="privacy" className="space-y-6">
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Shield className="h-5 w-5" />
-                  Privacy Settings
-                </CardTitle>
-                <CardDescription>Control who can see your information and activity</CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-6">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <Label className="text-base font-medium">Profile Visibility</Label>
-                    <p className="text-sm text-muted-foreground">Make your profile visible to other users</p>
-                  </div>
-                  <Switch defaultChecked={user?.isActive} />
+          {/* 2. SECURITY INTERFACE PARAMETERS */}
+          <TabsContent value="security" className="space-y-12 outline-none">
+            <div className="border border-border/30 bg-card rounded-2xl p-6 md:p-8 space-y-8">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-6 pb-6 border-b border-border/20">
+                <div className="space-y-1">
+                  <h3 className="text-sm font-mono uppercase tracking-widest text-primary font-medium flex items-center gap-2">
+                    <Key className="h-4 w-4" /> Password Control
+                  </h3>
+                  <p className="text-xs text-muted-foreground font-light">Update your account password regularly for enhanced security boundaries.</p>
                 </div>
 
-                <div className="flex items-center justify-between">
-                  <div>
-                    <Label className="text-base font-medium">Show Online Status</Label>
-                    <p className="text-sm text-muted-foreground">Let others see when you're online</p>
-                  </div>
-                  <Switch defaultChecked={user?.isOnline} />
-                </div>
+                <Dialog open={showChangePassword} onOpenChange={setShowChangePassword}>
+                  <DialogTrigger asChild>
+                    <Button variant="ghost" className="text-xs uppercase tracking-widest font-medium h-11 px-4 border border-border/40 hover:bg-muted/60 rounded-lg gap-2">
+                      <Key className="h-3.5 w-3.5" /> Change Password
+                    </Button>
+                  </DialogTrigger>
+                  <DialogContent className="max-w-md bg-card text-foreground border-border/40 rounded-xl">
+                    <DialogHeader className="text-left">
+                      <DialogTitle className="text-lg font-medium tracking-tight">Change Password</DialogTitle>
+                      <DialogDescription className="text-xs text-muted-foreground font-light">
+                        Enter your current password and choose a new secure password structure.
+                      </DialogDescription>
+                    </DialogHeader>
+                    <div className="pt-2">
+                      <ChangePassword />
+                    </div>
+                  </DialogContent>
+                </Dialog>
+              </div>
 
-                <div className="flex items-center justify-between">
-                  <div>
-                    <Label className="text-base font-medium">Show Last Seen</Label>
-                    <p className="text-sm text-muted-foreground">Display when you were last active</p>
-                  </div>
-                  <Switch defaultChecked={true} />
+              <div className="text-center py-6 border border-dashed border-border/40 rounded-xl max-w-md mx-auto space-y-3">
+                <Shield className="h-5 w-5 mx-auto text-muted-foreground/40 stroke-[1.25]" />
+                <div className="space-y-0.5">
+                  <p className="text-xs font-medium">Two-Factor Authentication</p>
+                  <p className="text-[11px] text-muted-foreground/60 font-light">Extra verification layer coming soon to the platform environment.</p>
                 </div>
+                <Button variant="ghost" className="text-[10px] uppercase font-mono tracking-wider h-8 opacity-40" disabled>
+                  Enable 2FA
+                </Button>
+              </div>
+            </div>
+          </TabsContent>
 
-                <div className="pt-4 border-t">
-                  <AlertDialog open={showDeleteConfirm} onOpenChange={setShowDeleteConfirm}>
-                    <AlertDialogTrigger asChild>
-                      <Button variant="destructive" className="gap-2">
-                        <Trash2 className="h-4 w-4" />
+          {/* 3. PRIVACY VISIBILITY MATRICES */}
+          <TabsContent value="privacy" className="space-y-12 outline-none">
+            <div className="border border-border/30 bg-card rounded-2xl p-6 md:p-8 space-y-6">
+              <div className="flex items-center justify-between py-1">
+                <div className="space-y-0.5">
+                  <Label className="text-sm font-medium tracking-tight text-foreground">Profile Visibility</Label>
+                  <p className="text-xs text-muted-foreground font-light">Make your profile visible to other users inside global search indices.</p>
+                </div>
+                <Switch defaultChecked={user?.isActive} className="data-[state=checked]:bg-primary" />
+              </div>
+
+              <div className="flex items-center justify-between py-1 border-t border-border/20 pt-6">
+                <div className="space-y-0.5">
+                  <Label className="text-sm font-medium tracking-tight text-foreground">Show Online Status</Label>
+                  <p className="text-xs text-muted-foreground font-light">Let others see when you are online in chat quadrants.</p>
+                </div>
+                <Switch defaultChecked={user?.isOnline} className="data-[state=checked]:bg-primary" />
+              </div>
+
+              <div className="flex items-center justify-between py-1 border-t border-border/20 pt-6">
+                <div className="space-y-0.5">
+                  <Label className="text-sm font-medium tracking-tight text-foreground">Show Last Seen</Label>
+                  <p className="text-xs text-muted-foreground font-light">Display timestamps when you were last active inside network logs.</p>
+                </div>
+                <Switch defaultChecked={true} className="data-[state=checked]:bg-primary" />
+              </div>
+
+              <div className="pt-6 border-t border-border/20 flex justify-start">
+                <AlertDialog open={showDeleteConfirm} onOpenChange={setShowDeleteConfirm}>
+                  <AlertDialogTrigger asChild>
+                    <Button variant="ghost" className="text-xs uppercase tracking-widest font-medium h-10 px-4 border border-destructive/20 text-destructive hover:bg-destructive/10 rounded-lg gap-2 transition-colors">
+                      <Trash2 className="h-3.5 w-3.5" /> Delete Account
+                    </Button>
+                  </AlertDialogTrigger>
+                  <AlertDialogContent className="bg-card text-foreground border-border/40 rounded-xl max-w-md">
+                    <AlertDialogHeader className="text-left">
+                      <AlertDialogTitle className="text-lg font-medium tracking-tight">Delete Account</AlertDialogTitle>
+                      <AlertDialogDescription className="text-xs text-muted-foreground font-light leading-relaxed">
+                        This action cannot be undone. This will permanently delete your account and remove all your data records from our servers.
+                      </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter className="pt-2">
+                      <AlertDialogCancel className="text-xs uppercase tracking-wider font-medium rounded-lg h-10">Cancel</AlertDialogCancel>
+                      <AlertDialogAction
+                        onClick={handleDeleteAccount}
+                        className="text-xs uppercase tracking-wider font-medium bg-destructive text-destructive-foreground hover:opacity-90 rounded-lg h-10"
+                      >
                         Delete Account
-                      </Button>
-                    </AlertDialogTrigger>
-                    <AlertDialogContent>
-                      <AlertDialogHeader>
-                        <AlertDialogTitle>Delete Account</AlertDialogTitle>
-                        <AlertDialogDescription>
-                          This action cannot be undone. This will permanently delete your account and remove all your data from our servers.
-                        </AlertDialogDescription>
-                      </AlertDialogHeader>
-                      <AlertDialogFooter>
-                        <AlertDialogCancel>Cancel</AlertDialogCancel>
-                        <AlertDialogAction
-                          onClick={handleDeleteAccount}
-                          className="bg-red-600 hover:bg-red-700"
-                        >
-                          Delete Account
-                        </AlertDialogAction>
-                      </AlertDialogFooter>
-                    </AlertDialogContent>
-                  </AlertDialog>
-                </div>
-              </CardContent>
-            </Card>
+                      </AlertDialogAction>
+                    </AlertDialogFooter>
+                  </AlertDialogContent>
+                </AlertDialog>
+              </div>
+            </div>
           </TabsContent>
 
-          {/* Notifications Tab */}
-          <TabsContent value="notifications" className="space-y-6">
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Bell className="h-5 w-5" />
-                  Notification Preferences
-                </CardTitle>
-                <CardDescription>Choose how you want to be notified</CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-6">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <Label className="text-base font-medium">Email Notifications</Label>
-                    <p className="text-sm text-muted-foreground">Receive notifications via email</p>
-                  </div>
-                  <Switch defaultChecked={true} />
+          {/* 4. NOTIFICATION SYSTEM TOGGLES */}
+          <TabsContent value="notifications" className="space-y-12 outline-none">
+            <div className="border border-border/30 bg-card rounded-2xl p-6 md:p-8 space-y-6">
+              <div className="flex items-center justify-between py-1">
+                <div className="space-y-0.5">
+                  <Label className="text-sm font-medium tracking-tight text-foreground">Email Notifications</Label>
+                  <p className="text-xs text-muted-foreground font-light">Receive notifications via transactional email routing channels.</p>
                 </div>
+                <Switch defaultChecked={true} className="data-[state=checked]:bg-primary" />
+              </div>
 
-                <div className="flex items-center justify-between">
-                  <div>
-                    <Label className="text-base font-medium">Push Notifications</Label>
-                    <p className="text-sm text-muted-foreground">Browser push notifications</p>
-                  </div>
-                  <Switch defaultChecked={true} />
+              <div className="flex items-center justify-between py-1 border-t border-border/20 pt-6">
+                <div className="space-y-0.5">
+                  <Label className="text-sm font-medium tracking-tight text-foreground">Push Notifications</Label>
+                  <p className="text-xs text-muted-foreground font-light">Browser push alerts displayed natively on device viewports.</p>
                 </div>
+                <Switch defaultChecked={true} className="data-[state=checked]:bg-primary" />
+              </div>
 
-                <div className="flex items-center justify-between">
-                  <div>
-                    <Label className="text-base font-medium">New Messages</Label>
-                    <p className="text-sm text-muted-foreground">Notify when you receive new messages</p>
-                  </div>
-                  <Switch defaultChecked={true} />
+              <div className="flex items-center justify-between py-1 border-t border-border/20 pt-6">
+                <div className="space-y-0.5">
+                  <Label className="text-sm font-medium tracking-tight text-foreground">New Messages</Label>
+                  <p className="text-xs text-muted-foreground font-light">Notify instantly when you receive a message from handshake loops.</p>
                 </div>
+                <Switch defaultChecked={true} className="data-[state=checked]:bg-primary" />
+              </div>
 
-                <div className="flex items-center justify-between">
-                  <div>
-                    <Label className="text-base font-medium">Exchange Requests</Label>
-                    <p className="text-sm text-muted-foreground">Notify when someone requests an exchange</p>
-                  </div>
-                  <Switch defaultChecked={true} />
+              <div className="flex items-center justify-between py-1 border-t border-border/20 pt-6">
+                <div className="space-y-0.5">
+                  <Label className="text-sm font-medium tracking-tight text-foreground">Exchange Requests</Label>
+                  <p className="text-xs text-muted-foreground font-light">Notify when someone initiates a new exchange query for your skills.</p>
                 </div>
+                <Switch defaultChecked={true} className="data-[state=checked]:bg-primary" />
+              </div>
 
-                <div className="flex items-center justify-between">
-                  <div>
-                    <Label className="text-base font-medium">Weekly Digest</Label>
-                    <p className="text-sm text-muted-foreground">Weekly summary of your activity</p>
-                  </div>
-                  <Switch defaultChecked={false} />
+              <div className="flex items-center justify-between py-1 border-t border-border/20 pt-6">
+                <div className="space-y-0.5">
+                  <Label className="text-sm font-medium tracking-tight text-foreground">Weekly Digest</Label>
+                  <p className="text-xs text-muted-foreground font-light">Weekly comprehensive analytical summary of your activity indexes.</p>
                 </div>
-              </CardContent>
-            </Card>
+                <Switch defaultChecked={false} className="data-[state=checked]:bg-primary" />
+              </div>
+            </div>
           </TabsContent>
 
-          {/* Preferences Tab */}
-          <TabsContent value="preferences" className="space-y-6">
-            {/* Theme Settings */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Palette className="h-5 w-5" />
-                  Appearance
-                </CardTitle>
-                <CardDescription>Customize how the platform looks</CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="space-y-3">
-                  <Label className="text-base font-medium">Theme</Label>
-                  <div className="grid grid-cols-3 gap-3">
-                    <Button
-                      variant={theme === 'light' ? 'default' : 'outline'}
-                      onClick={() => handleThemeChange('light')}
-                      className="gap-2"
-                    >
-                      <Sun className="h-4 w-4" />
-                      Light
-                    </Button>
-                    <Button
-                      variant={theme === 'dark' ? 'default' : 'outline'}
-                      onClick={() => handleThemeChange('dark')}
-                      className="gap-2"
-                    >
-                      <Moon className="h-4 w-4" />
-                      Dark
-                    </Button>
-                    <Button
-                      variant={theme === 'system' ? 'default' : 'outline'}
-                      onClick={() => handleThemeChange('system')}
-                      className="gap-2"
-                    >
-                      <Monitor className="h-4 w-4" />
-                      System
-                    </Button>
-                  </div>
+          {/* 5. PREFERENCES APPEARANCE & SCHEDULING MANAGEMENT */}
+          <TabsContent value="preferences" className="space-y-10 outline-none">
+            {/* Visual Look Preference */}
+            <div className="border border-border/30 bg-card rounded-2xl p-6 md:p-8 space-y-4">
+              <div className="space-y-0.5">
+                <h3 className="text-sm font-medium tracking-tight">Appearance</h3>
+                <p className="text-xs text-muted-foreground font-light">Customize how the platform UI rendering renders layout sets.</p>
+              </div>
+              <div className="space-y-3 pt-2">
+                <Label className="text-xs uppercase tracking-wider text-muted-foreground font-mono font-medium">Theme Selection</Label>
+                <div className="grid grid-cols-3 gap-3 max-w-md">
+                  <Button
+                    variant={theme === 'light' ? 'default' : 'outline'}
+                    onClick={() => handleThemeChange('light')}
+                    className="text-xs font-medium uppercase tracking-wider h-10 rounded-lg gap-2"
+                  >
+                    <Sun className="h-3.5 w-3.5" /> Light
+                  </Button>
+                  <Button
+                    variant={theme === 'dark' ? 'default' : 'outline'}
+                    onClick={() => handleThemeChange('dark')}
+                    className="text-xs font-medium uppercase tracking-wider h-10 rounded-lg gap-2"
+                  >
+                    <Moon className="h-3.5 w-3.5" /> Dark
+                  </Button>
+                  <Button
+                    variant={theme === 'system' ? 'default' : 'outline'}
+                    onClick={() => handleThemeChange('system')}
+                    className="text-xs font-medium uppercase tracking-wider h-10 rounded-lg gap-2"
+                  >
+                    <Monitor className="h-3.5 w-3.5" /> System
+                  </Button>
                 </div>
-              </CardContent>
-            </Card>
+              </div>
+            </div>
 
-            {/* Availability Schedule */}
-            <AvailabilityManager
-              initialAvailability={user?.availability || []}
-              onAvailabilityChange={handleAvailabilityChange}
-            />
+            {/* Custom Availability Schedule Manager Core Block */}
+            <div className="space-y-4">
+              <AvailabilityManager
+                initialAvailability={user?.availability || []}
+                onAvailabilityChange={handleAvailabilityChange}
+              />
 
-            <div className="flex justify-end">
-              <Button 
-                onClick={handleSaveAvailability}
-                disabled={updateAvailabilityMutation.isPending}
-                className="gap-2"
-              >
-                {updateAvailabilityMutation.isPending ? 'Saving...' : 'Save Availability'}
-              </Button>
+              <div className="flex justify-end pt-2">
+                <Button 
+                  onClick={handleSaveAvailability}
+                  disabled={updateAvailabilityMutation.isPending}
+                  className="text-xs uppercase tracking-widest font-medium px-6 py-5 rounded-lg bg-foreground text-background hover:opacity-90 transition-opacity"
+                >
+                  {updateAvailabilityMutation.isPending ? 'Saving Matrix...' : 'Save Availability'}
+                </Button>
+              </div>
             </div>
           </TabsContent>
         </Tabs>

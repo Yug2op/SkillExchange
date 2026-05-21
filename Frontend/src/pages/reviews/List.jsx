@@ -7,8 +7,6 @@ import { useMe } from '@/hooks/useMe';
 
 // shadcn/ui components
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import {
@@ -22,19 +20,13 @@ import {
 // Icons
 import {
   Star,
-  MessageSquare,
   Calendar,
-  User,
-  Award,
-  TrendingUp,
-  Filter,
+  Plus,
+  ArrowRight,
   Eye,
-  Edit,
-  Trash2,
-  Plus
+  Loader2
 } from 'lucide-react';
 
-// Move formatDate outside the component so it can be shared
 const formatDate = (date) => {
   return new Date(date).toLocaleDateString('en-US', {
     year: 'numeric',
@@ -66,7 +58,6 @@ export default function ReviewsListPage() {
   const givenReviews = givenReviewsData?.data?.reviews || [];
   const receivedReviews = receivedReviewsData?.data?.reviews || [];
 
-  // Calculate stats
   const stats = {
     given: givenReviews.length,
     received: receivedReviews.length,
@@ -76,133 +67,133 @@ export default function ReviewsListPage() {
   };
 
   const getRatingColor = (rating) => {
-    if (rating >= 4) return 'text-green-600';
-    if (rating >= 3) return 'text-yellow-600';
-    return 'text-red-600';
+    if (rating >= 4) return 'text-primary';
+    if (rating >= 3) return 'text-secondary';
+    return 'text-destructive';
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900">
-      <div className="container mx-auto px-4 py-8">
-        <div className="max-w-6xl mx-auto space-y-8">
-          {/* Header */}
-          <motion.div
-            initial={{ y: -20, opacity: 0 }}
-            animate={{ y: 0, opacity: 1 }}
-            className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4"
-          >
-            <div>
-              <h1 className="text-3xl font-bold flex items-center gap-3">
-                <Star className="h-8 w-8 text-primary" />
-                My Reviews
-              </h1>
-              <p className="text-muted-foreground mt-1">
-                Manage your skill exchange reviews and feedback
-              </p>
+    <div className="min-h-screen bg-background text-foreground antialiased selection:bg-primary/20 transition-colors duration-300">
+      <div className="max-w-6xl mx-auto px-6 py-16 space-y-12">
+        
+        {/* TOP LEVEL NAVIGATION HEADER ARCHITECTURE */}
+        <motion.div
+          initial={{ y: -10, opacity: 0 }}
+          animate={{ y: 0, opacity: 1 }}
+          transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
+          className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-6"
+        >
+          <div className="space-y-2">
+            <h1 className="text-4xl font-light tracking-tighter leading-none flex items-center gap-3">
+              <Star className="h-7 w-7 text-primary stroke-[1.25]" /> My Reviews.
+            </h1>
+            <p className="text-sm text-muted-foreground font-light">
+              Manage your skill exchange reviews and feedback logs natively.
+            </p>
+          </div>
+
+          <Button asChild variant="outline" className="text-xs uppercase tracking-widest font-medium h-11 px-5 border border-border/40 hover:bg-muted/60 bg-card text-foreground rounded-lg gap-2 self-start sm:self-auto transition-all">
+            <Link to={`/exchanges`}>
+              <Plus className="h-3.5 w-3.5" /> View Exchanges
+            </Link>
+          </Button>
+        </motion.div>
+
+        {/* COMPACT METRICS SYSTEM OVERLAYS */}
+        <motion.div
+          initial={{ y: 10, opacity: 0 }}
+          animate={{ y: 0, opacity: 1 }}
+          transition={{ delay: 0.05 }}
+          className="grid gap-6 grid-cols-2 sm:grid-cols-3"
+        >
+          <div className="p-6 border border-border/30 bg-card rounded-xl">
+            <div className="text-3xl font-light text-foreground">{stats.given}</div>
+            <div className="text-[10px] uppercase tracking-widest font-mono text-muted-foreground mt-1">Reviews Given</div>
+          </div>
+          <div className="p-6 border border-border/30 bg-card rounded-xl">
+            <div className="text-3xl font-light text-primary">{stats.received}</div>
+            <div className="text-[10px] uppercase tracking-widest font-mono text-muted-foreground mt-1">Reviews Received</div>
+          </div>
+          <div className="p-6 border border-border/30 bg-card rounded-xl col-span-2 sm:col-span-1">
+            <div className={`text-3xl font-light ${getRatingColor(stats.averageRating)}`}>
+              {stats.averageRating}
             </div>
+            <div className="text-[10px] uppercase tracking-widest font-mono text-muted-foreground mt-1">Average Rating</div>
+          </div>
+        </motion.div>
 
-            <Button asChild className="gap-2">
-              <Link to={`/exchanges`}>
-                <Plus className="h-4 w-4" />
-                View Exchanges
-              </Link>
-            </Button>
-          </motion.div>
+        {/* SORT CONTROLS OPTIONS STRIP */}
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: 0.1 }}
+          className="flex pt-2"
+        >
+          <Select value={sortBy} onValueChange={setSortBy}>
+            <SelectTrigger className="w-[180px] h-10 rounded-lg bg-card border-border/40 focus:ring-0">
+              <SelectValue placeholder="Sort Parameters" />
+            </SelectTrigger>
+            <SelectContent className="bg-card text-foreground border-border/40">
+              <SelectItem value="recent">Most Recent First</SelectItem>
+              <SelectItem value="oldest">Oldest Array First</SelectItem>
+              <SelectItem value="rating">By Rating Indices</SelectItem>
+            </SelectContent>
+          </Select>
+        </motion.div>
 
-          {/* Stats Cards */}
-          <motion.div
-            initial={{ y: 20, opacity: 0 }}
-            animate={{ y: 0, opacity: 1 }}
-            transition={{ delay: 0.1 }}
-            className="grid gap-4 sm:grid-cols-3"
-          >
-            <Card className="text-center">
-              <CardContent className="pt-6">
-                <div className="text-2xl font-bold text-primary">{stats.given}</div>
-                <div className="text-sm text-muted-foreground">Reviews Given</div>
-              </CardContent>
-            </Card>
-            <Card className="text-center">
-              <CardContent className="pt-6">
-                <div className="text-2xl font-bold text-green-600">{stats.received}</div>
-                <div className="text-sm text-muted-foreground">Reviews Received</div>
-              </CardContent>
-            </Card>
-            <Card className="text-center">
-              <CardContent className="pt-6">
-                <div className={`text-2xl font-bold ${getRatingColor(stats.averageRating)}`}>
-                  {stats.averageRating}
-                </div>
-                <div className="text-sm text-muted-foreground">Average Rating</div>
-              </CardContent>
-            </Card>
-          </motion.div>
+        {/* TABS DIRECTORY MANAGER WRAPPER */}
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: 0.15 }}
+        >
+          <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full space-y-8">
+            <TabsList className="w-full h-auto p-0 bg-transparent border-b border-border/30 rounded-none justify-start gap-4">
+              <TabsTrigger value="given" className="h-10 px-4 rounded-none bg-transparent border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent text-xs font-medium uppercase tracking-widest text-muted-foreground data-[state=active]:text-foreground transition-all">
+                Reviews Given ({stats.given})
+              </TabsTrigger>
+              <TabsTrigger value="received" className="h-10 px-4 rounded-none bg-transparent border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent text-xs font-medium uppercase tracking-widest text-muted-foreground data-[state=active]:text-foreground transition-all">
+                Reviews Received ({stats.received})
+              </TabsTrigger>
+            </TabsList>
 
-          {/* Filters */}
-          <motion.div
-            initial={{ y: 20, opacity: 0 }}
-            animate={{ y: 0, opacity: 1 }}
-            transition={{ delay: 0.2 }}
-            className="flex gap-4"
-          >
-            <Select value={sortBy} onValueChange={setSortBy}>
-              <SelectTrigger className="w-[180px]">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="recent">Most Recent</SelectItem>
-                <SelectItem value="oldest">Oldest First</SelectItem>
-                <SelectItem value="rating">By Rating</SelectItem>
-              </SelectContent>
-            </Select>
-          </motion.div>
+            <TabsContent value="given" className="mt-8 outline-none">
+              <ReviewsSection 
+                reviews={givenReviews} 
+                isLoading={givenLoading}
+                type="given"
+                currentUserId={currentUserId}
+                formatDate={formatDate}
+              />
+            </TabsContent>
 
-          {/* Reviews Tabs */}
-          <motion.div
-            initial={{ y: 20, opacity: 0 }}
-            animate={{ y: 0, opacity: 1 }}
-            transition={{ delay: 0.3 }}
-          >
-            <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-              <TabsList className="grid w-full grid-cols-2">
-                <TabsTrigger value="given">Reviews Given ({stats.given})</TabsTrigger>
-                <TabsTrigger value="received">Reviews Received ({stats.received})</TabsTrigger>
-              </TabsList>
-
-              <TabsContent value="given" className="mt-6">
-                <ReviewsSection 
-                  reviews={givenReviews} 
-                  isLoading={givenLoading}
-                  type="given"
-                  currentUserId={currentUserId}
-                  formatDate={formatDate}
-                />
-              </TabsContent>
-
-              <TabsContent value="received" className="mt-6">
-                <ReviewsSection 
-                  reviews={receivedReviews} 
-                  isLoading={receivedLoading}
-                  type="received"
-                  currentUserId={currentUserId}
-                  formatDate={formatDate}
-                />
-              </TabsContent>
-            </Tabs>
-          </motion.div>
-        </div>
+            <TabsContent value="received" className="mt-8 outline-none">
+              <ReviewsSection 
+                reviews={receivedReviews} 
+                isLoading={receivedLoading}
+                type="received"
+                currentUserId={currentUserId}
+                formatDate={formatDate}
+              />
+            </TabsContent>
+          </Tabs>
+        </motion.div>
+        
       </div>
     </div>
   );
 }
 
-// Reviews Section Component
-function ReviewsSection({ reviews, isLoading, type, currentUserId, formatDate }) {
+function ReviewsSection({ reviews, isLoading, type, formatDate }) {
   if (isLoading) {
     return (
-      <div className="animate-pulse space-y-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-12 pt-4">
         {[...Array(3)].map((_, i) => (
-          <div key={i} className="h-32 bg-gray-200 dark:bg-gray-700 rounded-lg"></div>
+          <div key={i} className="space-y-4 opacity-40 animate-pulse">
+            <div className="w-10 h-10 rounded-full bg-muted" />
+            <div className="h-4 bg-muted rounded w-1/3" />
+            <div className="h-12 bg-muted rounded-lg" />
+          </div>
         ))}
       </div>
     );
@@ -211,146 +202,116 @@ function ReviewsSection({ reviews, isLoading, type, currentUserId, formatDate })
   if (reviews.length === 0) {
     return (
       <motion.div
-        initial={{ scale: 0.9, opacity: 0 }}
-        animate={{ scale: 1, opacity: 1 }}
-        className="text-center py-16 space-y-4"
+        initial={{ opacity: 0, scale: 0.99 }}
+        animate={{ opacity: 1, scale: 1 }}
+        className="text-center py-20 max-w-sm mx-auto space-y-4"
       >
-        <div className="h-24 w-24 rounded-full bg-muted flex items-center justify-center mx-auto">
-          <Star className="h-12 w-12 text-muted-foreground" />
+        <div className="p-3 w-fit rounded-xl bg-muted border border-border/10 mx-auto text-muted-foreground/40">
+          <Star className="h-5 w-5 stroke-[1.25]" />
         </div>
-        <div className="space-y-2">
-          <h3 className="text-2xl font-semibold">
-            {type === 'given' ? 'No reviews given yet' : 'No reviews received yet'}
-          </h3>
-          <p className="text-muted-foreground max-w-md mx-auto">
-            {type === 'given' 
-              ? 'Complete skill exchanges to start giving reviews and help others improve!'
-              : 'Complete skill exchanges to start receiving reviews from other users.'
-            }
-          </p>
-        </div>
-        <Button asChild variant="outline">
-          <Link to="/exchanges">
-            View Exchanges
-          </Link>
+        <p className="text-sm text-muted-foreground font-light leading-relaxed">
+          {type === 'given' 
+            ? 'Complete skill exchanges to start logging constructive performance evaluation arrays.'
+            : 'Your global profile record has not received transaction evaluation metrics yet.'
+          }
+        </p>
+        <Button asChild variant="link" className="text-xs uppercase tracking-wider font-medium text-primary">
+          <Link to="/exchanges">Verify Open Exchanges</Link>
         </Button>
       </motion.div>
     );
   }
 
   return (
-    <div className="space-y-4">
-      <AnimatePresence>
+    <div className="grid grid-cols-1 md:grid-cols-3 gap-x-12 gap-y-16 pt-4">
+      <AnimatePresence mode="popLayout">
         {reviews.map((review, index) => (
           <motion.div
             key={review._id}
-            initial={{ opacity: 0, y: 20 }}
+            initial={{ opacity: 0, y: 12 }}
             animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -20 }}
-            transition={{ delay: index * 0.1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.4, delay: Math.min(index * 0.04, 0.3), ease: [0.16, 1, 0.3, 1] }}
+            className="group relative flex flex-col justify-between"
           >
-            <Card className="hover:shadow-lg transition-shadow">
-              <CardContent className="p-6">
-                <div className="flex items-start gap-4">
-                  {/* User Avatar */}
-                  <Avatar className="h-12 w-12 flex-shrink-0">
+            <div>
+              {/* HEADING AVATAR AND USER IDENTITY STRUCT */}
+              <div className="flex items-center justify-between gap-4 mb-4">
+                <div className="flex items-center gap-3">
+                  <Avatar className="h-10 w-10 filter grayscale group-hover:grayscale-0 transition-all duration-500 rounded-full ring-1 ring-border/40">
                     <AvatarImage 
                       src={type === 'given' 
-                        ? review.reviewee?.profilePic?.url || `https://ui-avatars.com/api/?name=${review.reviewee?.name || 'U'}&background=random` 
-                        : review.reviewer?.profilePic?.url || `https://ui-avatars.com/api/?name=${review.reviewer?.name || 'U'}&background=random`
+                        ? review.reviewee?.profilePic?.url 
+                        : review.reviewer?.profilePic?.url
                       } 
-                      loading="lazy"
                     />
-                    <AvatarFallback>
-                      {type === 'given' 
-                        ? review.reviewee?.name?.[0]?.toUpperCase() || 'U'
-                        : review.reviewer?.name?.[0]?.toUpperCase() || 'U'
-                      }
-                    </AvatarFallback>
+                    <AvatarFallback className="text-xs font-medium bg-muted">U</AvatarFallback>
                   </Avatar>
-
-                  {/* Review Content */}
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-start justify-between mb-2">
-                      <div>
-                        <h3 className="font-semibold">
-                          {type === 'given' 
-                            ? `Review for ${review.reviewee?.name}`
-                            : `Review from ${review.reviewer?.name}`
-                          }
-                        </h3>
-                        <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                          <div className="flex items-center gap-1">
-                            {[...Array(5)].map((_, i) => (
-                              <Star
-                                key={i}
-                                className={`h-3 w-3 ${
-                                  i < review.rating 
-                                    ? 'fill-yellow-400 text-yellow-400' 
-                                    : 'text-gray-300'
-                                }`}
-                              />
-                            ))}
-                          </div>
-                          <span className="font-medium">{review.rating}/5</span>
-                          <span>•</span>
-                          <Calendar className="h-3 w-3" />
-                          <span>{formatDate(review.createdAt)}</span>
-                        </div>
-                      </div>
-
-                      {type === 'given' && (
-                        <div className="flex gap-2">
-                          <Button variant="outline" size="sm" asChild>
-                            <Link to={`/reviews/${review._id}`}>
-                              <Eye className="h-3 w-3 mr-1" />
-                              View
-                            </Link>
-                          </Button>
-                        </div>
-                      )}
-                    </div>
-
-                    {/* Exchange Context */}
-                    {review.exchange && (
-                      <div className="mb-3 p-3 bg-muted/50 rounded-lg">
-                        <div className="text-sm">
-                          <span className="font-medium">Exchange:</span> {review.exchange.skillOffered} ↔ {review.exchange.skillRequested}
-                        </div>
-                      </div>
-                    )}
-
-                    {/* Feedback */}
-                    {review.feedback && (
-                      <p className="text-sm text-muted-foreground leading-relaxed">
-                        "{review.feedback}"
-                      </p>
-                    )}
-
-                    {/* Aspect Ratings */}
-                    {review.aspectRatings && (
-                      <div className="mt-3 grid grid-cols-2 gap-2">
-                        {Object.entries(review.aspectRatings).map(([aspect, rating]) => (
-                          <div key={aspect} className="text-xs">
-                            <span className="capitalize">{aspect}:</span>
-                            <div className="flex items-center gap-1 mt-1">
-                              {[...Array(5)].map((_, i) => (
-                                <div
-                                  key={i}
-                                  className={`w-2 h-2 rounded-full ${
-                                    i < rating ? 'bg-yellow-400' : 'bg-gray-200'
-                                  }`}
-                                />
-                              ))}
-                            </div>
-                          </div>
+                  
+                  <div className="space-y-0.5">
+                    <h3 className="text-sm font-medium tracking-tight text-foreground">
+                      {type === 'given' ? `Review for ${review.reviewee?.name}` : `Review from ${review.reviewer?.name}`}
+                    </h3>
+                    <div className="flex items-center gap-2 text-xs font-light text-muted-foreground/70">
+                      <div className="flex items-center gap-0.5">
+                        {[...Array(5)].map((_, i) => (
+                          <Star key={i} className={`h-2.5 w-2.5 ${i < review.rating ? 'fill-secondary text-secondary' : 'text-border/60'}`} />
                         ))}
                       </div>
-                    )}
+                      <span className="font-mono text-[11px] text-foreground/80">{review.rating}.0 / 5.0</span>
+                    </div>
                   </div>
                 </div>
-              </CardContent>
-            </Card>
+
+                {/* VIEW SPECIFIC DETAILS NAVIGATION FOR HANDLER PATHS */}
+                {type === 'given' && (
+                  <Link to={`/reviews/${review._id}`} className="opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                    <div className="h-7 w-7 rounded-full bg-muted/60 hover:bg-foreground hover:text-background flex items-center justify-center transition-colors">
+                      <Eye className="h-3.5 w-3.5" />
+                    </div>
+                  </Link>
+                )}
+              </div>
+
+              {/* DYNAMIC CONTEXT MAPPING REFERENCE BLOCK */}
+              {review.exchange && (
+                <div className="mb-3 text-[11px] font-light text-muted-foreground/60 font-mono uppercase tracking-wide truncate">
+                  <span className="text-foreground/40 font-medium">Array Trace:</span> {review.exchange.skillOffered} ⇄ {review.exchange.skillRequested}
+                </div>
+              )}
+
+              {/* LOG FEEDBACK CONTENT BLOCKS */}
+              {review.feedback && (
+                <p className="text-sm text-muted-foreground/90 font-light leading-relaxed mb-4 italic line-clamp-3 pr-4">
+                  "{review.feedback}"
+                </p>
+              )}
+            </div>
+
+            {/* LOWER ASPECT DETAILED MATRICES ELEMENT INDICATOR */}
+            {review.aspectRatings && (
+              <div className="mt-2 pt-3 border-t border-border/30 grid grid-cols-2 gap-x-4 gap-y-2 opacity-60 group-hover:opacity-100 transition-opacity duration-300">
+                {Object.entries(review.aspectRatings).map(([aspect, rating]) => (
+                  <div key={aspect} className="flex items-center justify-between gap-2 text-[11px] font-light text-muted-foreground/80">
+                    <span className="capitalize text-foreground/60">{aspect}:</span>
+                    <div className="flex items-center gap-0.5 shrink-0">
+                      {[...Array(5)].map((_, i) => (
+                        <div
+                          key={i}
+                          className={`w-1.5 h-1.5 rounded-full ${i < rating ? 'bg-secondary' : 'bg-border/60'}`}
+                        />
+                      ))}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {/* LOWER CORNER DATE TIMESTAMP FOOTPRINT */}
+            <div className="flex items-center gap-1 text-[10px] font-mono uppercase tracking-wider text-muted-foreground/30 font-light mt-4">
+              <Calendar className="h-3 w-3" /> <span>Logged {formatDate(review.createdAt)}</span>
+            </div>
+
           </motion.div>
         ))}
       </AnimatePresence>

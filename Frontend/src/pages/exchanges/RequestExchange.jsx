@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { motion } from 'framer-motion';
@@ -10,609 +10,392 @@ import { useMe } from '@/hooks/useMe';
 
 // shadcn/ui components
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Textarea } from '@/components/ui/textarea';
 import { Separator } from '@/components/ui/separator';
-import {
-    Alert,
-    AlertDescription,
-    AlertTitle,
-} from '@/components/ui/alert';
+import { Label } from '@/components/ui/label';
 
 // Icons
 import {
-    ArrowLeft,
-    User,
-    Star,
-    BookOpen,
-    GraduationCap,
-    Target,
-    CheckCircle2,
-    AlertCircle,
-    Send,
-    MessageSquare,
-    Sparkles,
-    TrendingUp,
-    Calendar,
-    MapPin,
-    Clock,
-    Award,
-    Users,
-    Lightbulb,
-    Heart,
-    Zap
+  ArrowLeft,
+  User,
+  Star,
+  BookOpen,
+  GraduationCap,
+  Target,
+  CheckCircle2,
+  AlertCircle,
+  Send,
+  MessageSquare,
+  Sparkles,
+  TrendingUp,
+  MapPin,
+  Loader2
 } from 'lucide-react';
 
 export default function RequestExchange() {
-    const { id } = useParams();
-    const navigate = useNavigate();
-    const queryClient = useQueryClient();
-    const { data: meData } = useMe();
+  const { id } = useParams();
+  const navigate = useNavigate();
+  const queryClient = useQueryClient();
+  const { data: meData } = useMe();
 
-    const [loading, setLoading] = useState(false);
-    const [selectedSkills, setSelectedSkills] = useState([]);
-    const [selectedTeachingSkill, setSelectedTeachingSkill] = useState('')
-    const [message, setMessage] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [selectedSkills, setSelectedSkills] = useState([]);
+  const [selectedTeachingSkill, setSelectedTeachingSkill] = useState('');
+  const [message, setMessage] = useState('');
 
-    const { data: userData, isLoading: userLoading, isError: userError } = useQuery({
-        queryKey: ['user', id],
-        queryFn: () => getUser(id),
-        enabled: !!id,
+  const { data: userData, isLoading: userLoading, isError: userError } = useQuery({
+    queryKey: ['user', id],
+    queryFn: () => getUser(id),
+    enabled: !!id,
+  });
+
+  const { data: currentUserData, isLoading: currentUserLoading } = useQuery({
+    queryKey: ['me'],
+    queryFn: getMe,
+  });
+
+  const user = userData?.data?.user;
+  const currentUser = currentUserData?.data?.user || meData;
+
+  // 1. Skills they can teach that you want to learn (What you can request)
+  // FALLBACK: If empty, show ALL their teaching skills so you can still request something!
+  const matchingSkills = useMemo(() => {
+    const directMatches = (user?.skillsToTeach || []).filter(skillObj => {
+      const userSkillName = typeof skillObj.skill === 'string' ? skillObj.skill : skillObj.skillName;
+      return (currentUser?.skillsToLearn || []).some(learnObj => {
+        const learnSkillName = typeof learnObj.skill === 'string' ? learnObj.skill : learnObj.skillName;
+        return learnSkillName === userSkillName;
+      });
     });
 
-    const { data: currentUserData, isLoading: currentUserLoading } = useQuery({
-        queryKey: ['me'],
-        queryFn: getMe,
+    return directMatches.length > 0 ? directMatches : (user?.skillsToTeach || []);
+  }, [user, currentUser]);
+
+  // 2. Skills you can teach that they want to learn (What you can offer)
+  // FALLBACK: If empty, show ALL your teaching skills so you can offer anything!
+  const offeringSkills = useMemo(() => {
+    const directOffers = (currentUser?.skillsToTeach || []).filter(skillObj => {
+      const currentUserSkillName = typeof skillObj.skill === 'string' ? skillObj.skill : skillObj.skillName;
+      return (user?.skillsToLearn || []).some(teachObj => {
+        const teachSkillName = typeof teachObj.skill === 'string' ? teachObj.skill : teachObj.skillName;
+        return teachSkillName === currentUserSkillName;
+      });
     });
 
-    const user = userData?.data?.user;
-    const currentUser = currentUserData?.data?.user || meData;
+    return directOffers.length > 0 ? directOffers : (currentUser?.skillsToTeach || []);
+  }, [user, currentUser]);
 
-    // Find matching skills (skills user can teach that current user wants to learn)
-    const matchingSkills = (user?.skillsToTeach || []).filter(skillObj => {
-        const userSkillName = typeof skillObj.skill === 'string' ? skillObj.skill : skillObj.skillName;
-        return (currentUser?.skillsToLearn || []).some(learnObj => {
-            const learnSkillName = typeof learnObj.skill === 'string' ? learnObj.skill : learnObj.skillName;
-            return learnSkillName === userSkillName;
-        });
-    });
+  useEffect(() => {
+    // Auto-select your offer if there's only one option available
+    if (offeringSkills.length === 1 && !selectedTeachingSkill) {
+      const skillName = typeof offeringSkills[0].skill === 'string'
+        ? offeringSkills[0].skill
+        : offeringSkills[0].skillName || 'None';
+      setSelectedTeachingSkill(skillName);
+    }
+  }, [offeringSkills, selectedTeachingSkill]);
 
-    // Find skills current user can offer (skills current user can teach that user wants to learn)
-    const offeringSkills = (currentUser?.skillsToTeach || []).filter(skillObj => {
-        const currentUserSkillName = typeof skillObj.skill === 'string' ? skillObj.skill : skillObj.skillName;
-        return (user?.skillsToLearn || []).some(teachObj => {
-            const teachSkillName = typeof teachObj.skill === 'string' ? teachObj.skill : teachObj.skillName;
-            return teachSkillName === currentUserSkillName;
-        });
-    });
+  const handleSkillToggle = (skill) => {
+    // Single select mode for clear payload transitions
+    setSelectedSkills([skill]);
+  };
 
-    useEffect(() => {
-        // Auto-select the teaching skill if there's only one option
-        if (offeringSkills.length === 1 && !selectedTeachingSkill) {
-            const skillName = typeof offeringSkills[0].skill === 'string'
-                ? offeringSkills[0].skill
-                : offeringSkills[0].skillName || 'Unknown Skill';
-            setSelectedTeachingSkill(skillName);
-        }
-    }, [offeringSkills, selectedTeachingSkill]);
+  const handleTeachingSkillSelect = (skill) => {
+    setSelectedTeachingSkill(skill);
+  };
 
-    const handleSkillToggle = (skill) => {
-        setSelectedSkills(prev =>
-            prev.includes(skill)
-                ? prev.filter(s => s !== skill)
-                : [...prev, skill]
-        );
-    };
+  // Check if at least an asymmetric single route match is possible
+  const canExchange = matchingSkills.length > 0 || offeringSkills.length > 0;
 
-    const handleTeachingSkillSelect = (skill) => {
-        setSelectedTeachingSkill(skill);
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+
+    const finalRequestedSkill = selectedSkills[0] || 'None';
+    const finalOfferedSkill = selectedTeachingSkill || 
+      (offeringSkills.length === 1 
+        ? (typeof offeringSkills[0].skill === 'string' ? offeringSkills[0].skill : offeringSkills[0].skillName) 
+        : 'None');
+
+    // Block logic only if both sides are completely empty
+    if (finalRequestedSkill === 'None' && finalOfferedSkill === 'None') {
+      toast.error('Cannot create an empty exchange. Please select a skill to learn or teach.');
+      return;
     }
 
-    const handleSubmit = async (e) => {
-        e.preventDefault();
-        if (selectedSkills.length === 0) {
-            toast.error('Please select at least one skill you want to learn');
-            return;
-        }
+    try {
+      setLoading(true);
 
-        // ✅ UPDATE: Check if offeringSkills is empty instead of selectedTeachingSkill
-        if (offeringSkills.length === 0) {
-            toast.error('No compatible skills found. Please update your profile or choose a different user.');
-            return;
-        }
+      await createRequest({
+        receiverId: id,
+        skillOffered: finalOfferedSkill,
+        skillRequested: finalRequestedSkill,
+        message: message || undefined
+      });
 
-        try {
-            setLoading(true);
-            const selectedSkill = selectedSkills[0];
-
-            // ✅ UPDATE: Use the first (and only) offering skill if not manually selected
-            const teachingSkillToUse = selectedTeachingSkill ||
-                (offeringSkills.length === 1
-                    ? (typeof offeringSkills[0].skill === 'string' ? offeringSkills[0].skill : offeringSkills[0].skillName)
-                    : null);
-
-            if (!teachingSkillToUse) {
-                toast.error('Please select a skill you want to teach');
-                return;
-            }
-
-            await createRequest({
-                receiverId: id,
-                skillOffered: teachingSkillToUse,
-                skillRequested: selectedSkill,
-                message: message || undefined
-            });
-
-            toast.success('Exchange request sent successfully!');
-            queryClient.invalidateQueries(['exchanges']);
-            navigate('/exchanges');
-        } catch (error) {
-            toast.error(error.response?.data?.message || 'Failed to send request');
-            setLoading(false);
-        }
-    };
-
-    if (userLoading || currentUserLoading) {
-        return (
-            <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900">
-                <div className="container mx-auto px-4 py-12">
-                    <div className="max-w-5xl mx-auto space-y-10">
-                        <div className="animate-pulse space-y-6">
-                            <div className="h-8 bg-gray-200 dark:bg-gray-700 rounded w-1/3"></div>
-                            <div className="grid gap-6 md:grid-cols-2">
-                                <div className="h-64 bg-gray-200 dark:bg-gray-700 rounded-lg"></div>
-                                <div className="h-64 bg-gray-200 dark:bg-gray-700 rounded-lg"></div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        );
+      toast.success('Exchange request sent successfully!');
+      queryClient.invalidateQueries(['exchanges']);
+      navigate('/exchanges');
+    } catch (error) {
+      toast.error(error.response?.data?.message || 'Failed to send request');
+      setLoading(false);
     }
+  };
 
-    if (userError || !user) {
-        return (
-            <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900">
-                <div className="container mx-auto px-4 py-8">
-                    <motion.div
-                        initial={{ scale: 0.9, opacity: 0 }}
-                        animate={{ scale: 1, opacity: 1 }}
-                        className="max-w-md mx-auto text-center"
-                    >
-                        <AlertCircle className="h-16 w-16 text-red-500 mx-auto mb-4" />
-                        <h2 className="text-2xl font-bold mb-2">User Not Found</h2>
-                        <p className="text-muted-foreground mb-6">
-                            The user you're trying to request an exchange with doesn't exist or has been removed.
-                        </p>
-                        <Button asChild>
-                            <Link to="/search">
-                                <ArrowLeft className="mr-2 h-4 w-4" />
-                                Back to Search
-                            </Link>
-                        </Button>
-                    </motion.div>
-                </div>
-            </div>
-        );
-    }
-
+  if (userLoading || currentUserLoading) {
     return (
-        <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900">
-            <div className="container mx-auto px-4 py-8">
-                <div className="max-w-4xl mx-auto space-y-8">
-                    {/* Header */}
-                    <motion.div
-                        initial={{ y: -20, opacity: 0 }}
-                        animate={{ y: 0, opacity: 1 }}
-                        className="flex items-center gap-4"
-                    >
-                        <Button variant="outline" size="sm" asChild>
-                            <Link to={`/users/${id}`}>
-                                <ArrowLeft className="h-4 w-4 mr-2" />
-                                Back to Profile
-                            </Link>
-                        </Button>
-                        <Separator orientation="vertical" className="h-6" />
-                        <div>
-                            <h1 className="text-2xl font-bold">Request Skill Exchange</h1>
-                            <p className="text-muted-foreground">Start a learning partnership with {user.name}</p>
-                        </div>
-                    </motion.div>
-
-                    <div className="grid gap-10 lg:grid-cols-2">
-                        {/* User Profile Card */}
-                        <motion.div
-                            initial={{ x: -20, opacity: 0 }}
-                            animate={{ x: 0, opacity: 1 }}
-                            transition={{ delay: 0.1 }}
-                        >
-                            <Card>
-                                <CardHeader>
-                                    <CardTitle className="flex items-center gap-2">
-                                        <User className="h-5 w-5 text-primary" />
-                                        Learning Partner
-                                    </CardTitle>
-                                </CardHeader>
-                                <CardContent className="space-y-6">
-                                    <div className="flex items-center gap-4">
-                                        <Avatar className="h-16 w-16">
-                                            <AvatarImage src={user.profilePic?.url || `https://ui-avatars.com/api/?name=${user?.name || 'U'}&background=random`} alt={user.name} loading="lazy"/>
-                                            <AvatarFallback className="bg-gradient-to-br from-blue-500 to-purple-600 text-white text-lg">
-                                                {user.name?.split(' ').map(n => n[0]).join('').toUpperCase() || 'U'}
-                                            </AvatarFallback>
-                                        </Avatar>
-                                        <div className="flex-1">
-                                            <div className="font-semibold text-lg">{user.name}</div>
-                                            <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                                                <Star className="h-4 w-4 fill-yellow-400 text-yellow-400" />
-                                                {user.rating?.average?.toFixed(1) || '0.0'} ({user.rating?.count || 0} reviews)
-                                            </div>
-                                            {user.location && (
-                                                <div className="flex items-center gap-1 text-sm text-muted-foreground mt-1">
-                                                    <MapPin className="h-3 w-3" />
-                                                    {user.location.city}, {user.location.country}
-                                                </div>
-                                            )}
-                                        </div>
-                                    </div>
-
-                                    {user.bio && (
-                                        <div>
-                                            <h4 className="font-medium mb-2">About</h4>
-                                            <p className="text-sm text-muted-foreground">{user.bio}</p>
-                                        </div>
-                                    )}
-
-                                    {/* Skills Preview */}
-                                    <div className="space-y-4">
-                                        {user.skillsToTeach && user.skillsToTeach.length > 0 && (
-                                            <div>
-                                                <h4 className="font-medium mb-2 flex items-center gap-2">
-                                                    <BookOpen className="h-4 w-4 text-primary" />
-                                                    Can Teach ({user.skillsToTeach.length})
-                                                </h4>
-                                                <div className="flex flex-wrap gap-2">
-                                                    {user.skillsToTeach.slice(0, 3).map((skillObj, index) => (
-                                                        <Badge key={`teach-${index}-${skillObj.skill}`} variant="secondary" className="text-xs">
-                                                            {typeof skillObj.skill === 'string' ? skillObj.skill : skillObj.skillName || 'Unknown Skill'}
-                                                        </Badge>
-                                                    ))}
-                                                    {user.skillsToTeach.length > 3 && (
-                                                        <Badge variant="outline" className="text-xs">
-                                                            +{user.skillsToTeach.length - 3}
-                                                        </Badge>
-                                                    )}
-                                                </div>
-                                            </div>
-                                        )}
-
-                                        {user.skillsToLearn && user.skillsToLearn.length > 0 && (
-                                            <div>
-                                                <h4 className="font-medium mb-2 flex items-center gap-2">
-                                                    <Target className="h-4 w-4 text-primary" />
-                                                    Wants to Learn ({user.skillsToLearn.length})
-                                                </h4>
-                                                <div className="flex flex-wrap gap-2">
-                                                    {user.skillsToLearn.slice(0, 3).map((skillObj, index) => (
-                                                        <Badge key={`learn-${index}-${skillObj.skill}`} variant="outline" className="text-xs">
-                                                            {typeof skillObj.skill === 'string' ? skillObj.skill : skillObj.skillName || 'Unknown Skill'}
-                                                        </Badge>
-                                                    ))}
-                                                    {user.skillsToLearn.length > 3 && (
-                                                        <Badge variant="outline" className="text-xs">
-                                                            +{user.skillsToLearn.length - 3}
-                                                        </Badge>
-                                                    )}
-                                                </div>
-                                            </div>
-                                        )}
-                                    </div>
-
-                                    {/* Compatibility Indicator */}
-                                    {matchingSkills.length > 0 && (
-                                        <Alert className="bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-800">
-                                            <CheckCircle2 className="h-4 w-4 text-green-600" />
-                                            <AlertTitle className="text-green-800 dark:text-green-200">
-                                                Great Match!
-                                            </AlertTitle>
-                                            <AlertDescription className="text-green-700 dark:text-green-300">
-                                                You have {matchingSkills.length} skill{matchingSkills.length > 1 ? 's' : ''} in common that you can exchange.
-                                            </AlertDescription>
-                                        </Alert>
-                                    )}
-                                </CardContent>
-                            </Card>
-                        </motion.div>
-
-                        {/* Exchange Request Form */}
-                        <motion.div
-                            initial={{ x: 20, opacity: 0 }}
-                            animate={{ x: 0, opacity: 1 }}
-                            transition={{ delay: 0.2 }}
-                        >
-                            <Card>
-                                <CardHeader>
-                                    <CardTitle className="flex items-center gap-2">
-                                        <MessageSquare className="h-5 w-5 text-primary" />
-                                        Create Exchange Request
-                                    </CardTitle>
-                                    <CardDescription>
-                                        Select the skills you want to learn and we'll find matching skills you can offer in exchange.
-                                    </CardDescription>
-                                </CardHeader>
-                                <CardContent>
-                                    <form onSubmit={handleSubmit} className="space-y-6">
-                                        {/* Skills Selection */}
-                                        <div className="space-y-4">
-                                            <div>
-                                                <h4 className="font-medium mb-3 flex items-center gap-2">
-                                                    <GraduationCap className="h-4 w-4 text-primary" />
-                                                    Select Skills You Want to Learn
-                                                </h4>
-
-                                                {matchingSkills.length > 0 ? (
-                                                    <div className="grid gap-3 sm:grid-cols-2">
-                                                        {matchingSkills.map((skillObj, index) => {
-                                                            const skillName = typeof skillObj.skill === 'string' ? skillObj.skill : skillObj.skillName || 'Unknown Skill';
-                                                            return (
-                                                                <motion.button
-                                                                    key={`matching-${index}-${skillName}`}
-                                                                    type="button"
-                                                                    onClick={() => handleSkillToggle(skillName)}
-                                                                    whileHover={{ scale: 1.02 }}
-                                                                    whileTap={{ scale: 0.98 }}
-                                                                    className={`p-3 rounded-lg border-2 text-left transition-all ${selectedSkills.includes(skillName)
-                                                                        ? 'border-primary bg-primary/10 text-primary'
-                                                                        : 'border-border hover:border-primary/50 hover:bg-muted/50'
-                                                                        }`}
-                                                                >
-                                                                    <div className="font-medium text-sm">{skillName}</div>
-                                                                    <div className="text-xs text-muted-foreground mt-1">
-                                                                        Available for exchange
-                                                                    </div>
-                                                                </motion.button>
-                                                            );
-                                                        })}
-                                                    </div>
-                                                ) : (
-                                                    <Alert className="bg-yellow-50 dark:bg-yellow-900/20 border-yellow-200 dark:border-yellow-800">
-                                                        <AlertCircle className="h-4 w-4 text-yellow-600" />
-                                                        <AlertTitle className="text-yellow-800 dark:text-yellow-200">
-                                                            No Matching Skills
-                                                        </AlertTitle>
-                                                        <AlertDescription className="text-yellow-700 dark:text-yellow-300">
-                                                            {user.name} doesn't teach any skills that you've listed in your "Wants to learn" section.
-                                                            Update your profile to find better matches.
-                                                        </AlertDescription>
-                                                    </Alert>
-                                                )}
-                                            </div>
-
-                                            {/* Exchange Preview */}
-                                            {selectedSkills.length > 0 && offeringSkills.length > 0 && (
-                                                <motion.div
-                                                    initial={{ opacity: 0, y: 10 }}
-                                                    animate={{ opacity: 1, y: 0 }}
-                                                    className="bg-muted/50 rounded-lg p-4 space-y-4"
-                                                >
-                                                    <h4 className="font-medium flex items-center gap-2">
-                                                        <Sparkles className="h-4 w-4 text-primary" />
-                                                        Exchange Preview
-                                                    </h4>
-
-                                                    <div className="grid gap-4 sm:grid-cols-2">
-                                                        <div className="bg-white dark:bg-gray-800 rounded-md p-3">
-                                                            <div className="text-xs text-muted-foreground mb-1">You'll Learn</div>
-                                                            <div className="font-medium">{selectedSkills[0]}</div>
-                                                        </div>
-
-                                                        <div className="bg-white dark:bg-gray-800 rounded-md p-3">
-                                                            <div className="text-xs text-muted-foreground mb-2">You'll Teach</div>
-                                                            {offeringSkills.length === 1 ? (
-                                                                <div className="font-medium">
-                                                                    {typeof offeringSkills[0].skill === 'string' ? offeringSkills[0].skill : offeringSkills[0].skillName || 'Unknown Skill'}
-                                                                </div>
-                                                            ) : (
-                                                                <div className="space-y-2">
-                                                                    <div className="space-y-3">
-                                                                        <div className="text-sm font-medium text-muted-foreground">
-                                                                            Choose which skill you want to teach:
-                                                                        </div>
-                                                                        <div className="grid gap-2">
-                                                                            {offeringSkills.map((skillObj, index) => {
-                                                                                const skillName = typeof skillObj.skill === 'string' ? skillObj.skill : skillObj.skillName || 'Unknown Skill';
-                                                                                return (
-                                                                                    <motion.button
-                                                                                        key={`offering-${index}-${skillName}`}
-                                                                                        type="button"
-                                                                                        onClick={() => handleTeachingSkillSelect(skillName)}
-                                                                                        whileHover={{ scale: 1.02 }}
-                                                                                        whileTap={{ scale: 0.98 }}
-                                                                                        className={`group relative p-3 rounded-lg border-2 text-left transition-all duration-200 ${
-                                                                                            selectedTeachingSkill === skillName
-                                                                                                ? 'border-primary bg-primary/10 shadow-md'
-                                                                                                : 'border-border hover:border-primary/50 hover:bg-muted/50'
-                                                                                        }`}
-                                                                                    >
-                                                                                        <div className="flex items-center justify-between">
-                                                                                            <div className="flex items-center gap-3">
-                                                                                                <div className={`w-9 h-8 rounded-full flex items-center justify-center transition-colors ${
-                                                                                                    selectedTeachingSkill === skillName
-                                                                                                        ? 'bg-primary text-primary-foreground'
-                                                                                                        : 'bg-muted text-muted-foreground group-hover:bg-primary/20'
-                                                                                                }`}>
-                                                                                                    <BookOpen className="h-4 w-4" />
-                                                                                                </div>
-                                                                                                <div>
-                                                                                                    <div className="font-medium text-sm">{skillName}</div>
-                                                                                                    <div className="text-xs text-muted-foreground">
-                                                                                                        Skill you can teach
-                                                                                                    </div>
-                                                                                                </div>
-                                                                                            </div>
-                                                                                        </div>
-                                                                                    </motion.button>
-                                                                                );
-                                                                            })}
-                                                                        </div>
-                                                                    </div>
-                                                                </div>
-                                                            )}
-                                                        </div>
-                                                    </div>
-
-                                                    <div className="text-xs text-muted-foreground">
-                                                        This creates a balanced skill exchange where both parties benefit equally.
-                                                    </div>
-                                                </motion.div>
-                                            )}
-                                        </div>
-
-                                        {/* Message */}
-                                        <div className="space-y-2">
-                                            <label className="text-sm font-medium">
-                                                Personal Message (Optional)
-                                            </label>
-                                            <Textarea
-                                                value={message}
-                                                onChange={(e) => setMessage(e.target.value)}
-                                                placeholder="Add a personal message to introduce yourself and explain why you're interested in this exchange..."
-                                                className="min-h-24"
-                                            />
-                                            <div className="text-xs text-muted-foreground">
-                                                A thoughtful message can help build rapport and increase acceptance chances.
-                                            </div>
-                                        </div>
-
-                                        {/* Action Buttons */}
-                                        <motion.div
-                                            initial={{ y: 20, opacity: 0 }}
-                                            animate={{ y: 0, opacity: 1 }}
-                                            className="flex flex-col sm:flex-row gap-3 pt-4 border-t"
-                                        >
-                                            <Button
-                                                type="button"
-                                                variant="outline"
-                                                onClick={() => navigate(`/users/${id}`)}
-                                                className="flex-1"
-                                            >
-                                                View Full Profile
-                                            </Button>
-                                            <Button
-                                                type="submit"
-                                                disabled={
-                                                    loading ||
-                                                    selectedSkills.length === 0 ||
-                                                    offeringSkills.length === 0 ||
-                                                    (offeringSkills.length > 1 && !selectedTeachingSkill)
-                                                }
-                                                className="flex-1 gap-2"
-                                            >
-                                                {loading ? (
-                                                    <>
-                                                        <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                                                        Sending...
-                                                    </>
-                                                ) : (
-                                                    <>
-                                                        <Send className="h-4 w-4" />
-                                                        Send Exchange Request
-                                                    </>
-                                                )}
-                                            </Button>
-                                        </motion.div>
-                                    </form>
-                                </CardContent>
-                            </Card>
-                        </motion.div>
-                    </div>
-
-                    {/* Matching Skills Analysis */}
-                    {offeringSkills.length > 0 && (
-                        <motion.div
-                            initial={{ y: 20, opacity: 0 }}
-                            animate={{ y: 0, opacity: 1 }}
-                            transition={{ delay: 0.3 }}
-                        >
-                            <Card>
-                                <CardHeader>
-                                    <CardTitle className="flex items-center gap-2">
-                                        <TrendingUp className="h-5 w-5 text-primary" />
-                                        Skills You Can Offer
-                                    </CardTitle>
-                                    <CardDescription>
-                                        These are the skills you can teach that {user.name} wants to learn
-                                    </CardDescription>
-                                </CardHeader>
-                                <CardContent>
-                                    <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-                                        {offeringSkills.map((skillObj, index) => {
-                                            const skillName = typeof skillObj.skill === 'string' ? skillObj.skill : skillObj.skillName || 'Unknown Skill';
-                                            return (
-                                                <div key={`offer-${index}-${skillName}`} className="flex items-center gap-3 p-3 bg-muted/50 rounded-lg">
-                                                    <div className="w-8 h-8 bg-gradient-to-br from-green-500 to-emerald-600 rounded-full flex items-center justify-center text-white text-sm font-semibold">
-                                                        ✓
-                                                    </div>
-                                                    <div>
-                                                        <div className="font-medium text-sm">{skillName}</div>
-                                                        <div className="text-xs text-muted-foreground">Available to teach</div>
-                                                    </div>
-                                                </div>
-                                            );
-                                        })}
-                                    </div>
-                                </CardContent>
-                            </Card>
-                        </motion.div>
-                    )}
-
-                    {/* Tips Card */}
-                    <motion.div
-                        initial={{ y: 20, opacity: 0 }}
-                        animate={{ y: 0, opacity: 1 }}
-                        transition={{ delay: 0.4 }}
-                    >
-                        <Card className="bg-gradient-to-r from-blue-50 to-purple-50 dark:from-blue-900/20 dark:to-purple-900/20 border-primary/20">
-                            <CardHeader>
-                                <CardTitle className="flex items-center gap-2 text-primary">
-                                    <Lightbulb className="h-5 w-5" />
-                                    Tips for Better Exchanges
-                                </CardTitle>
-                            </CardHeader>
-                            <CardContent>
-                                <div className="grid gap-4 sm:grid-cols-2">
-                                    <div className="space-y-2">
-                                        <h4 className="font-medium text-sm">✨ Be Specific</h4>
-                                        <p className="text-xs text-muted-foreground">
-                                            Mention your experience level and specific goals in your message.
-                                        </p>
-                                    </div>
-                                    <div className="space-y-2">
-                                        <h4 className="font-medium text-sm">🎯 Choose Wisely</h4>
-                                        <p className="text-xs text-muted-foreground">
-                                            Select skills you're genuinely interested in learning.
-                                        </p>
-                                    </div>
-                                    <div className="space-y-2">
-                                        <h4 className="font-medium text-sm">💬 Communicate</h4>
-                                        <p className="text-xs text-muted-foreground">
-                                            A friendly message increases your chances of acceptance.
-                                        </p>
-                                    </div>
-                                    <div className="space-y-2">
-                                        <h4 className="font-medium text-sm">⏰ Be Patient</h4>
-                                        <p className="text-xs text-muted-foreground">
-                                            Quality exchanges take time to find the right match.
-                                        </p>
-                                    </div>
-                                </div>
-                            </CardContent>
-                        </Card>
-                    </motion.div>
-                </div>
-            </div>
-        </div>
+      <div className="min-h-screen bg-background text-foreground flex items-center justify-center">
+            <BrandLoader/>
+          </div>
     );
+  }
+
+  if (userError || !user) {
+    return (
+      <div className="min-h-screen bg-background text-foreground flex items-center justify-center px-6">
+        <motion.div initial={{ opacity: 0, scale: 0.98 }} animate={{ opacity: 1, scale: 1 }} className="text-center max-w-sm space-y-6">
+          <div className="h-12 w-12 rounded-full bg-destructive/10 text-destructive flex items-center justify-center mx-auto">
+            <AlertCircle className="h-5 w-5" />
+          </div>
+          <div className="space-y-1">
+            <h3 className="text-xl font-medium tracking-tight">User Node Absent</h3>
+            <p className="text-sm text-muted-foreground/80 font-light leading-relaxed">
+              The partner profile could not be verified inside our active system directory registry.
+            </p>
+          </div>
+          <Button asChild className="w-full text-xs uppercase tracking-widest font-medium py-5 rounded-lg bg-foreground text-background">
+            <Link to="/search"><ArrowLeft className="mr-2 h-3.5 w-3.5" /> Return to Directory</Link>
+          </Button>
+        </motion.div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="min-h-screen bg-background text-foreground antialiased selection:bg-primary/20 transition-colors duration-300">
+      <div className="max-w-5xl mx-auto px-6 py-16 space-y-12">
+        
+        {/* HEADER */}
+        <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} className="flex items-center gap-4">
+          <Button variant="ghost" size="sm" asChild className="text-xs uppercase tracking-widest font-medium h-10 px-3 -ml-3 hover:bg-muted/60">
+            <Link to={`/users/${id}`}>
+              <ArrowLeft className="h-3.5 w-3.5 mr-2" /> Back to Profile
+            </Link>
+          </Button>
+          <Separator orientation="vertical" className="h-5 border-border/30" />
+          <div>
+            <h1 className="text-2xl font-light tracking-tight">Request Skill Exchange</h1>
+            <p className="text-xs text-muted-foreground font-light mt-1">Start a learning partnership with {user.name}</p>
+          </div>
+        </motion.div>
+
+        {/* CONTORL SPLIT PANELS */}
+        <div className="grid gap-12 lg:grid-cols-2">
+          
+          {/* LEFT COLUMN: PARTNER METRICS */}
+          <motion.div initial={{ opacity: 0, x: -12 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.05 }} className="space-y-8">
+            <div className="border border-border/30 bg-card rounded-2xl p-6 md:p-8 space-y-6">
+              <div className="flex items-center gap-4 pb-4 border-b border-border/20">
+                <Avatar className="h-14 w-14 filter grayscale contrast-125 rounded-full ring-1 ring-border/40">
+                  <AvatarImage src={user.profilePic?.url} />
+                  <AvatarFallback className="text-sm font-mono bg-muted">{user.name?.charAt(0)}</AvatarFallback>
+                </Avatar>
+                <div className="space-y-1">
+                  <h3 className="text-base font-medium tracking-tight text-foreground">{user.name}</h3>
+                  <div className="flex items-center gap-3 text-xs text-muted-foreground/80 font-light">
+                    <span className="flex items-center gap-0.5"><Star className="h-3 w-3 fill-secondary text-secondary" /> {user.rating?.average?.toFixed(1) || '0.0'}</span>
+                    {user.location && <span className="flex items-center gap-1"><MapPin className="h-3 w-3" /> {user.location.city}</span>}
+                  </div>
+                </div>
+              </div>
+
+              {user.bio && <p className="text-xs text-muted-foreground/80 font-light leading-relaxed">{user.bio}</p>}
+
+              {/* Flexible Match Status banner info */}
+              {canExchange ? (
+                <div className="p-4 border border-primary/20 bg-background/40 rounded-xl space-y-1">
+                  <div className="text-xs font-medium text-primary flex items-center gap-1.5 font-mono uppercase tracking-wide">
+                    <CheckCircle2 className="h-3.5 w-3.5" /> Match Protocol Active
+                  </div>
+                  <p className="text-[11px] text-muted-foreground/80 font-light leading-relaxed">
+                    You can trade any missing skill parameter directly using our flexible single-ended learning protocol.
+                  </p>
+                </div>
+              ) : (
+                <div className="p-4 border border-destructive/20 bg-destructive/5 rounded-xl space-y-1">
+                  <div className="text-xs font-medium text-destructive flex items-center gap-1.5 font-mono uppercase tracking-wide">
+                    <AlertCircle className="h-3.5 w-3.5" /> Empty Profile Repositories
+                  </div>
+                  <p className="text-[11px] text-destructive/80 font-light leading-relaxed">
+                    Both users must provide at least one active talent token field to initialize connection parameters.
+                  </p>
+                </div>
+              )}
+            </div>
+
+            {/* DIRECT SYSTEM ASSETS CARDS SUMMARY */}
+            {offeringSkills.length > 0 && (
+              <div className="border border-border/30 bg-card rounded-2xl p-6 md:p-8 space-y-4">
+                <div className="space-y-0.5">
+                  <h4 className="text-xs uppercase tracking-widest text-muted-foreground/70 font-mono font-medium flex items-center gap-2">
+                    <TrendingUp className="h-3.5 w-3.5 text-primary" /> Available Teaching Vault
+                  </h4>
+                  <p className="text-[11px] text-muted-foreground/50 font-light">Skills on your profile that can be mapped to this request configuration.</p>
+                </div>
+                <div className="flex flex-wrap gap-1.5 pt-1">
+                  {offeringSkills.map((skillObj, index) => {
+                    const skillName = typeof skillObj.skill === 'string' ? skillObj.skill : skillObj.skillName || 'Unknown Skill';
+                    return (
+                      <span key={`offer-${index}-${skillName}`} className="text-xs font-mono tracking-wide px-3 py-1 bg-background border border-border/40 text-foreground/80 rounded-md">
+                        {skillName}
+                      </span>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+          </motion.div>
+
+          {/* RIGHT COLUMN: ACTION SELECTIONS SUBMIT FORM */}
+          <motion.div initial={{ opacity: 0, x: 12 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.1 }}>
+            <form onSubmit={handleSubmit} className="border border-border/30 bg-card rounded-2xl p-6 md:p-8 space-y-8">
+              
+              {/* DESIRED ACQUISITION FIELDS SELECTION */}
+              <div className="space-y-4">
+                <div className="space-y-1">
+                  <Label className="text-xs uppercase tracking-widest text-muted-foreground/80 font-mono font-medium block">
+                    1. Select Skill You Want to Learn (Request)
+                  </Label>
+                  <p className="text-[11px] text-muted-foreground/50 font-light">Choose a proficiency framework. Leave unselected if you are trading solely on an offer basis.</p>
+                </div>
+
+                {matchingSkills.length > 0 ? (
+                  <div className="grid gap-3 grid-cols-1 sm:grid-cols-2">
+                    {matchingSkills.map((skillObj, index) => {
+                      const skillName = typeof skillObj.skill === 'string' ? skillObj.skill : skillObj.skillName || 'Unknown Skill';
+                      const isSelected = selectedSkills.includes(skillName);
+                      return (
+                        <button
+                          key={`matching-${index}-${skillName}`}
+                          type="button"
+                          onClick={() => handleSkillToggle(skillName)}
+                          className={`p-3.5 rounded-xl border text-left transition-all duration-200 ${
+                            isSelected
+                              ? 'border-primary bg-primary/[0.03] text-primary shadow-sm'
+                              : 'border-border/60 bg-background hover:border-foreground/20 hover:bg-muted/40'
+                          }`}
+                        >
+                          <div className="text-xs font-medium tracking-tight flex items-center justify-between">
+                            <span>{skillName}</span>
+                            {isSelected && <Sparkles className="h-3 w-3 shrink-0" />}
+                          </div>
+                        </button>
+                      );
+                    })}
+                  </div>
+                ) : (
+                  <div className="p-3 text-xs border border-dashed border-border text-center rounded-xl text-muted-foreground/40 font-light">
+                    No matching teach targets discovered inside partner profile indices.
+                  </div>
+                )}
+              </div>
+
+              {/* REVERSE PIPELINE TEACH SELECTION CHIPS SLOT */}
+              <div className="space-y-4 pt-6 border-t border-border/20">
+                <div className="space-y-1">
+                  <Label className="text-xs uppercase tracking-widest text-muted-foreground/80 font-mono font-medium block">
+                    2. Select Skill You Want to Teach (Offer)
+                  </Label>
+                  <p className="text-[11px] text-muted-foreground/50 font-light">Select an instructional framework. Leave unselected if you want to request learning parameters only.</p>
+                </div>
+
+                {offeringSkills.length > 0 ? (
+                  offeringSkills.length === 1 ? (
+                    <div className="p-4 bg-background border border-border/30 rounded-xl text-xs font-light flex justify-between items-center">
+                      <div className="text-muted-foreground/60 font-mono uppercase tracking-wide text-[10px]">Active Standalone Offer:</div>
+                      <span className="font-medium text-foreground">{typeof offeringSkills[0].skill === 'string' ? offeringSkills[0].skill : offeringSkills[0].skillName}</span>
+                    </div>
+                  ) : (
+                    <div className="grid gap-3 grid-cols-1 sm:grid-cols-2">
+                      {offeringSkills.map((skillObj, index) => {
+                        const skillName = typeof skillObj.skill === 'string' ? skillObj.skill : skillObj.skillName || 'Unknown Skill';
+                        const isSelected = selectedTeachingSkill === skillName;
+                        return (
+                          <button
+                            key={`offering-${index}-${skillName}`}
+                            type="button"
+                            onClick={() => handleTeachingSkillSelect(skillName)}
+                            className={`p-3.5 rounded-xl border text-left transition-all duration-200 ${
+                              isSelected
+                                ? 'border-secondary bg-secondary/[0.03] text-foreground font-medium shadow-sm'
+                                : 'border-border/60 bg-background hover:border-foreground/20 hover:bg-muted/40'
+                            }`}
+                          >
+                            <div className="text-xs tracking-tight flex items-center justify-between">
+                              <span>{skillName}</span>
+                              {isSelected && <BookOpen className="h-3 w-3 shrink-0 text-secondary" />}
+                            </div>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  )
+                ) : (
+                  <div className="p-3 text-xs border border-dashed border-border text-center rounded-xl text-muted-foreground/40 font-light">
+                    No talent asset fields found on your account architecture profile.
+                  </div>
+                )}
+              </div>
+
+              {/* INTRODUCTION TEXT MESSAGE SECTION CONTAINER */}
+              <div className="space-y-2 pt-6 border-t border-border/20">
+                <Label className="text-xs uppercase tracking-widest text-muted-foreground/80 font-mono font-medium block">
+                  3. Personal Message (Optional)
+                </Label>
+                <div className="border border-border/40 focus-within:border-foreground/60 rounded-xl p-3 bg-background">
+                  <Textarea
+                    value={message}
+                    onChange={(e) => setMessage(e.target.value)}
+                    placeholder="Introduce your project workspace, request details, or scheduling expectations..."
+                    rows={4}
+                    className="resize-none border-0 bg-transparent p-0 focus-visible:ring-0 focus-visible:ring-offset-0 placeholder:text-muted-foreground/30 font-light text-sm shadow-none min-h-24"
+                  />
+                </div>
+              </div>
+
+              {/* ACTION COMPLIANCE CONTROLS TRIGGER BAR BUTTON LAYER */}
+              <div className="flex flex-col sm:flex-row gap-4 pt-6 border-t border-border/20">
+                <Button
+                  type="button"
+                  variant="ghost"
+                  onClick={() => navigate(`/users/${id}`)}
+                  className="flex-1 text-xs uppercase tracking-widest font-medium py-6 border border-border/40 hover:bg-muted/60 rounded-xl transition-all"
+                >
+                  Discard Request
+                </Button>
+                
+                <Button
+                  type="submit"
+                  disabled={loading || (!selectedSkills[0] && !selectedTeachingSkill)}
+                  className="flex-1 text-xs uppercase tracking-widest font-medium py-6 rounded-xl bg-foreground text-background hover:opacity-90 transition-opacity gap-2"
+                >
+                  {loading ? (
+                    <div className="min-h-screen bg-background text-foreground flex items-center justify-center">
+                          <BrandLoader/>
+                        </div>
+                  ) : (
+                    <>
+                      <Send className="h-3.5 w-3.5" /> Send Request
+                    </>
+                  )}
+                </Button>
+              </div>
+
+            </form>
+          </motion.div>
+
+        </div>
+      </div>
+    </div>
+  );
 }

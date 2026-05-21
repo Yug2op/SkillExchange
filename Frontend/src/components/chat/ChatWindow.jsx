@@ -347,7 +347,9 @@ const ChatInput = ({
           disabled={!newMessage.trim() || sendingMessage}
         >
           {sendingMessage ? (
-            <Loader2 className="w-4 h-4 sm:w-5 sm:h-5 animate-spin" />
+            <div className="min-h-screen bg-background text-foreground flex items-center justify-center">
+                  <BrandLoader/>
+                </div>
           ) : (
             <Send className="w-4 h-4 sm:w-5 sm:h-5" />
           )}

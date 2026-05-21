@@ -1,408 +1,241 @@
 import { useMe } from '@/hooks/useMe';
 import { Link } from 'react-router-dom';
-import { MapPin, Phone, Star, Calendar, Award, Edit3, Lock } from 'lucide-react';
+import { MapPin, Phone, Star, Calendar, Award, Edit3, Lock, Loader2, AlertCircle } from 'lucide-react';
 import { motion } from 'framer-motion';
+import BrandLoader from '@/components/BrandLoader';
 
 export default function MeProfile() {
   const { data: user, isLoading, isError } = useMe();
 
-
   if (isLoading) return (
-    <motion.div 
-      className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-gray-900 dark:to-gray-800 dark:to-indigo-900 flex items-center justify-center"
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      transition={{ duration: 0.5 }}
-    >
-      <motion.div 
-        className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600"
-        animate={{ rotate: 360 }}
-        transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
-      />
-    </motion.div>
+    <div className="min-h-screen bg-background text-foreground flex items-center justify-center">
+      <BrandLoader/>
+    </div>
   );
 
   if (isError || !user) return (
-    <motion.div 
-      className="min-h-screen bg-gradient-to-br from-red-50 to-pink-100 dark:from-gray-900 dark:via-gray-800 dark:to-red-900 flex items-center justify-center"
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.5 }}
-    >
-      <div className="text-center">
-        <motion.div 
-          className="text-6xl mb-4"
-          animate={{ scale: [1, 1.1, 1] }}
-          transition={{ duration: 2, repeat: Infinity }}
-        >
-          😵
-        </motion.div>
-        <h2 className="text-2xl font-bold text-gray-800 mb-2">Profile Not Found</h2>
-        <p className="text-gray-600">Please log in to view your profile</p>
-      </div>
-    </motion.div>
+    <div className="min-h-screen bg-background text-foreground flex items-center justify-center px-6">
+      <motion.div 
+        initial={{ opacity: 0, y: 10 }} 
+        animate={{ opacity: 1, y: 0 }} 
+        className="text-center max-w-sm space-y-6"
+      >
+        <div className="h-12 w-12 rounded-full bg-destructive/10 text-destructive flex items-center justify-center mx-auto">
+          <AlertCircle className="h-5 w-5" />
+        </div>
+        <div className="space-y-1">
+          <h3 className="text-xl font-medium tracking-tight">Identity Terminated</h3>
+          <p className="text-sm text-muted-foreground/80 font-light leading-relaxed">
+            Please log in to your account dashboard to authenticate session parameters.
+          </p>
+        </div>
+        <Button asChild className="w-full text-xs uppercase tracking-widest font-medium py-5 rounded-lg bg-foreground text-background">
+          <Link to="/login">Go to Login Matrix</Link>
+        </Button>
+      </motion.div>
+    </div>
   );
 
   return (
-    <motion.div 
-      className="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900" initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      transition={{ duration: 0.8 }}
-    >
-      <div className="container mx-auto max-w-4xl px-4 py-8">
-        {/* Header */}
+    <div className="min-h-screen bg-background text-foreground antialiased selection:bg-primary/20 transition-colors duration-300">
+      <div className="max-w-4xl mx-auto px-6 py-16 space-y-12">
+        
+        {/* INTERFACE HERO OVERVIEW CARD */}
         <motion.div 
-          className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl p-8 mb-8"
-          initial={{ opacity: 0, y: -20 }}
+          className="border border-border/30 bg-card rounded-2xl p-6 md:p-8 shadow-sm relative overflow-hidden"
+          initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.6, delay: 0.1 }}
+          transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
         >
-          <div className="flex items-center justify-between mb-6">
-            <motion.h1 
-              className="text-3xl font-bold text-gray-800 dark:text-gray-100"
-              initial={{ opacity: 0, x: -20 }}
-              animate={{ opacity: 1, x: 0 }}
-              transition={{ duration: 0.5, delay: 0.2 }}
-            >
-              My Profile
-            </motion.h1>
-            <motion.div
-              initial={{ opacity: 0, x: 20 }}
-              animate={{ opacity: 1, x: 0 }}
-              transition={{ duration: 0.5, delay: 0.3 }}
-            >
-              <Link 
-                to="/profile/edit" 
-                className="bg-indigo-600 hover:bg-indigo-700 text-white px-6 py-3 rounded-lg font-medium transition-all duration-200 flex items-center gap-2 hover:scale-105"
-              >
-                <Edit3 className="w-5 h-5" />
-                Edit Profile
-              </Link>
-            </motion.div>
-          </div>
+          <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-6">
+            
+            <div className="flex flex-col sm:flex-row gap-6 items-start">
+              {/* Profile Avatar Frame */}
+              <div className="relative shrink-0">
+                <img
+                  src={user?.profilePic?.url || `https://ui-avatars.com/api/?name=${user?.name || 'U'}&background=random`}
+                  alt={user.name}
+                  loading="lazy"
+                  className="w-24 h-24 rounded-full object-cover filter grayscale contrast-125 border border-border/40"
+                />
+                <span className="absolute bottom-0 right-0 h-3.5 w-3.5 rounded-full bg-secondary border-2 border-card animate-pulse" />
+              </div>
 
-          {/* Profile Header */}
-          <motion.div 
-            className="flex items-start gap-8"
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6, delay: 0.2 }}
-          >
-            {/* Avatar */}
-            <motion.div 
-              className="relative"
-              whileHover={{ scale: 1.05 }}
-              transition={{ duration: 0.2 }}
-            >
-              <img
-                src={user?.profilePic?.url || `https://ui-avatars.com/api/?name=${user?.name || 'U'}&background=random`}
-                alt={user.name}
-                loading="lazy"
-                className="w-32 h-32 rounded-full object-cover border-4 border-white dark:border-gray-800 shadow-lg"
-              />
-              <motion.div 
-                className="absolute -bottom-2 -right-2 bg-green-500 rounded-full p-2 border-4 border-white dark:border-gray-800"
-                animate={{ scale: [1, 1.2, 1] }}
-                transition={{ duration: 2, repeat: Infinity }}
-              >
-                <div className="w-4 h-4 bg-white rounded-full"></div>
-              </motion.div>
-            </motion.div>
-
-            {/* Basic Info */}
-            <motion.div 
-              className="flex-1"
-              initial={{ opacity: 0, x: 20 }}
-              animate={{ opacity: 1, x: 0 }}
-              transition={{ duration: 0.6, delay: 0.3 }}
-            >
-              <motion.h2 
-                className="text-2xl font-bold text-gray-800 dark:text-gray-100 mb-2"
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                transition={{ duration: 0.5, delay: 0.4 }}
-              >
-                {user.name}
-              </motion.h2>
-              <motion.p 
-                className="text-gray-600 dark:text-gray-400 mb-4 flex items-center gap-2"
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                transition={{ duration: 0.5, delay: 0.5 }}
-              >
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-                </svg>
-                {user.email}
-              </motion.p>
-
-              {/* Rating */}
-              <motion.div 
-                className="flex items-center gap-2 mb-4"
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.5, delay: 0.6 }}
-              >
-                <div className="flex items-center">
-                  {[...Array(5)].map((_, i) => (
-                    <motion.div
-                      key={i}
-                      initial={{ opacity: 0, scale: 0 }}
-                      animate={{ opacity: 1, scale: 1 }}
-                      transition={{ duration: 0.3, delay: 0.7 + (i * 0.1) }}
-                    >
-                      <Star
-                        className={`w-5 h-5 ${i < Math.floor(user.rating?.average || 0)
-                            ? 'text-yellow-400 fill-current'
-                          : 'text-gray-300 dark:text-gray-600'
-                        }`}
-                      />
-                    </motion.div>
-                  ))}
+              {/* Identity Descriptions */}
+              <div className="space-y-3">
+                <div className="space-y-1">
+                  <h2 className="text-3xl font-light tracking-tight text-foreground">{user.name}</h2>
+                  <p className="text-xs font-mono text-muted-foreground/80 font-light">{user.email}</p>
                 </div>
-                <span className="text-gray-600 dark:text-gray-400">
-                  {user.rating?.average?.toFixed(1) || '0.0'} ({user.rating?.count || 0} reviews)
-                </span>
-              </motion.div>
 
-              {/* Location */}
-              {(user.location?.city || user.location?.country) && (
-                <motion.div 
-                  className="flex items-center gap-2 text-gray-600 dark:text-gray-400 mb-2"
-                  initial={{ opacity: 0, x: -20 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  transition={{ duration: 0.5, delay: 0.8 }}
-                >
-                  <MapPin className="w-5 h-5" />
+                {/* Rating Vector Display */}
+                <div className="flex items-center gap-3 text-xs font-light text-muted-foreground/70">
+                  <div className="flex items-center gap-0.5">
+                    {[...Array(5)].map((_, i) => (
+                      <Star 
+                        key={i} 
+                        className={`h-3.5 w-3.5 ${i < Math.floor(user.rating?.average || 0) ? 'fill-secondary text-secondary' : 'text-border/60'}`} 
+                      />
+                    ))}
+                  </div>
                   <span>
-                    {[user.location.city, user.location.country].filter(Boolean).join(', ')}
+                    {user.rating?.average?.toFixed(1) || '0.0'} ({user.rating?.count || 0} index records)
                   </span>
-                </motion.div>
-              )}
+                </div>
 
-              {/* Phone */}
-              {user.phone && (
-                <motion.div 
-                  className="flex items-center gap-2 text-gray-600 dark:text-gray-400"
-                  initial={{ opacity: 0, x: -20 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  transition={{ duration: 0.5, delay: 0.9 }}
-                >
-                  <Phone className="w-5 h-5" />
-                  <span>{user.phone}</span>
-                </motion.div>
-              )}
-            </motion.div>
-          </motion.div>
+                {/* Meta Coordinate Lines */}
+                <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs font-light text-muted-foreground/60">
+                  {(user.location?.city || user.location?.country) && (
+                    <span className="flex items-center gap-1.5">
+                      <MapPin className="h-3.5 w-3.5" />
+                      {[user.location.city, user.location.country].filter(Boolean).join(', ')}
+                    </span>
+                  )}
+                  {user.phone && (
+                    <span className="flex items-center gap-1.5">
+                      <Phone className="h-3.5 w-3.5" /> {user.phone}
+                    </span>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            {/* Quick Actions Anchor */}
+            <Link 
+              to="/profile/edit" 
+              className="text-xs uppercase tracking-widest font-medium h-11 px-5 border border-border/40 hover:bg-muted bg-card text-foreground rounded-lg flex items-center justify-center gap-2 transition-colors self-start sm:self-auto"
+            >
+              <Edit3 className="w-3.5 h-3.5 text-primary" /> Edit Profile
+            </Link>
+
+          </div>
         </motion.div>
 
-        {/* Profile Details */}
+        {/* PROFILE ATTRIBUTE GRID SEGMENTS */}
         <div className="grid md:grid-cols-2 gap-8">
-          {/* Bio Section */}
+          
+          {/* About Me Section Area */}
           <motion.div 
-            className="bg-white rounded-2xl shadow-lg p-6 dark:bg-gray-800 dark:shadow-xl"
-            initial={{ opacity: 0, y: 20 }}
+            className="border border-border/30 bg-card rounded-2xl p-6 md:p-8 space-y-4"
+            initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6, delay: 0.3 }}
-            whileHover={{ y: -5, boxShadow: "0 20px 25px -5px rgba(0, 0, 0, 0.1)" }}
+            transition={{ delay: 0.05 }}
           >
-            <h3 className="text-xl font-semibold text-gray-800 mb-4 flex items-center gap-2 dark:text-white">
-              <svg className="w-6 h-6 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <h3 className="text-sm font-mono uppercase tracking-widest text-primary font-medium flex items-center gap-2">
+              <svg className="w-4 h-4 stroke-[1.5]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
               </svg>
               About Me
             </h3>
-            <motion.p 
-              className="text-gray-600 leading-relaxed dark:text-gray-300"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              transition={{ duration: 0.5, delay: 0.5 }}
-            >
-              {user.bio || 'No bio provided yet.'}
-            </motion.p>
+            <p className="text-sm text-muted-foreground/90 font-light leading-relaxed">
+              {user.bio || 'No structural biography logged yet.'}
+            </p>
           </motion.div>
 
-          {/* Skills Section */}
+          {/* Cleaned Skills Matrix Section Area (Fixed Duplication Defect) */}
           <motion.div 
-            className="bg-white rounded-2xl shadow-lg p-6 dark:bg-gray-800 dark:shadow-xl"
-            initial={{ opacity: 0, y: 20 }}
+            className="border border-border/30 bg-card rounded-2xl p-6 md:p-8 space-y-6"
+            initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6, delay: 0.4 }}
-            whileHover={{ y: -5, boxShadow: "0 20px 25px -5px rgba(0, 0, 0, 0.1)" }}
+            transition={{ delay: 0.1 }}
           >
-            <h3 className="text-xl font-semibold text-gray-800 mb-4 flex items-center gap-2 dark:text-white">
-              <Award className="w-6 h-6 text-indigo-600" />
-              Skills & Interests
+            <h3 className="text-sm font-mono uppercase tracking-widest text-primary font-medium flex items-center gap-2">
+              <Award className="w-4 h-4 stroke-[1.5]" /> Skills Matrix
             </h3>
 
-            <motion.div
-              className="space-y-4"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              transition={{ duration: 0.5, delay: 0.6 }}
-            >
-              {/* Skills Section */}
-              <motion.div
-                className="bg-white rounded-2xl shadow-lg p-6 dark:bg-gray-800 dark:shadow-xl"
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6, delay: 0.4 }}
-            whileHover={{ y: -5, boxShadow: "0 20px 25px -5px rgba(0, 0, 0, 0.1)" }}
-          >
-                <h3 className="text-xl font-semibold text-gray-800 mb-4 flex items-center gap-2 dark:text-white">
-              <Award className="w-6 h-6 text-indigo-600" />
-              Skills & Interests
-            </h3>
-            
-            <motion.div 
-              className="space-y-4"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              transition={{ duration: 0.5, delay: 0.6 }}
-            >
-              {/* Skills to Teach */}
-              <div>
-                    <h4 className="font-medium text-gray-700 mb-2 flex items-center gap-2 dark:text-gray-300">
-                  <span className="w-2 h-2 bg-green-500 rounded-full"></span>
-                  Skills I Teach
+            <div className="space-y-5">
+              {/* Instruction Mapping */}
+              <div className="space-y-2">
+                <h4 className="text-xs font-medium text-foreground/70 flex items-center gap-2">
+                  <span className="w-1.5 h-1.5 bg-secondary rounded-full" /> Skills I Teach
                 </h4>
-                <motion.div 
-                  className="flex flex-wrap gap-2"
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  transition={{ duration: 0.5, delay: 0.7 }}
-                >
+                <div className="flex flex-wrap gap-1.5">
                   {(user.skillsToTeach || []).length > 0 ? (
                     (user.skillsToTeach || []).map((skillObj, index) => (
-                      <motion.span
-                        key={index}
-                            className="bg-green-100 text-green-800 px-3 py-1 rounded-full text-sm font-medium dark:bg-green-900/30 dark:text-green-300"
-                        initial={{ opacity: 0, scale: 0 }}
-                        animate={{ opacity: 1, scale: 1 }}
-                        transition={{ duration: 0.3, delay: 0.8 + (index * 0.1) }}
-                        whileHover={{ scale: 1.05 }}
-                      >
-                        {skillObj.skill}
-                            {/* FIX: Smaller text for the level */}
-                            <span className="ml-1 text-xs opacity-75">
-                              ({skillObj.level})
-                            </span>
-                      </motion.span>
+                      <span key={index} className="text-xs font-light px-3 py-1 bg-background border border-border/40 text-foreground/90 rounded-md">
+                        {skillObj.skill} <span className="text-[10px] font-mono text-muted-foreground/60 ml-0.5">({skillObj.level})</span>
+                      </span>
                     ))
                   ) : (
-                        <span className="text-gray-500 text-sm italic dark:text-gray-400">No skills listed</span>
+                    <span className="text-xs italic text-muted-foreground/40 font-light pl-1">No instructional arrays active.</span>
                   )}
-                </motion.div>
+                </div>
               </div>
 
-              {/* Skills to Learn */}
-              <div>
-                    <h4 className="font-medium text-gray-700 mb-2 flex items-center gap-2 dark:text-gray-300">
-                  <span className="w-2 h-2 bg-blue-500 rounded-full"></span>
-                  Skills I Want to Learn
+              {/* Acquisition Mapping */}
+              <div className="space-y-2">
+                <h4 className="text-xs font-medium text-foreground/70 flex items-center gap-2">
+                  <span className="w-1.5 h-1.5 bg-primary rounded-full" /> Skills I Want to Learn
                 </h4>
-                <motion.div 
-                  className="flex flex-wrap gap-2"
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  transition={{ duration: 0.5, delay: 0.9 }}
-                >
+                <div className="flex flex-wrap gap-1.5">
                   {(user.skillsToLearn || []).length > 0 ? (
                     (user.skillsToLearn || []).map((skillObj, index) => (
-                      <motion.span
-                        key={index}
-                            className="bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-sm font-medium dark:bg-blue-900/30 dark:text-blue-300"
-                        initial={{ opacity: 0, scale: 0 }}
-                        animate={{ opacity: 1, scale: 1 }}
-                        transition={{ duration: 0.3, delay: 1.0 + (index * 0.1) }}
-                        whileHover={{ scale: 1.05 }}
-                      >
-                        {skillObj.skill}
-                            {/* FIX: Smaller text for the level */}
-                            <span className="ml-1 text-xs opacity-75">
-                              ({skillObj.level})
-                            </span>
-                      </motion.span>
+                      <span key={index} className="text-xs font-light px-3 py-1 bg-background border border-border/40 text-muted-foreground rounded-md">
+                        {skillObj.skill} <span className="text-[10px] font-mono text-muted-foreground/40 ml-0.5">({skillObj.level})</span>
+                      </span>
                     ))
                   ) : (
-                        <span className="text-gray-500 text-sm italic dark:text-gray-400">No skills listed</span>
+                    <span className="text-xs italic text-muted-foreground/40 font-light pl-1">No learning arrays active.</span>
                   )}
-                </motion.div>
+                </div>
               </div>
-                </motion.div>
-              </motion.div>
-            </motion.div>
+            </div>
           </motion.div>
+
         </div>
 
-        {/* Stats Section */}
+        {/* HORIZONTAL SYSTEM AUDIT SUMMARY OVERLAY */}
         <motion.div 
-          className="mt-8 bg-white dark:bg-gray-800 rounded-2xl shadow-lg p-6"
-          initial={{ opacity: 0, y: 20 }}
+          className="border border-border/30 bg-card rounded-2xl p-6 md:p-8"
+          initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.6, delay: 0.5 }}
+          transition={{ delay: 0.15 }}
         >
-          <h3 className="text-xl font-semibold text-gray-800 dark:text-gray-100 mb-6 flex items-center gap-2">
-            <svg className="w-6 h-6 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
-            </svg>
-            Activity Overview
+          <h3 className="text-xs font-mono uppercase tracking-widest text-muted-foreground/60 mb-6 flex items-center gap-2">
+            <Calendar className="h-3.5 w-3.5" /> Operational Metrics Overview
           </h3>
 
           <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
             {[
-              { value: user.rating?.count || 0, label: 'Reviews', color: 'indigo' },
-              { value: user.rating?.average?.toFixed(1) || '0.0', label: 'Rating', color: 'green' },
-              { value: new Date(user.createdAt).getFullYear(), label: 'Member Since', color: 'blue' },
-              { value: user.isEmailVerified ? 'Verified' : 'Pending', label: 'Email Status', color: 'yellow' }].map((stat, index) => (
-              <motion.div 
-                key={stat.label}
-                className="text-center"
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.5, delay: 0.6 + (index * 0.1) }}
-                whileHover={{ scale: 1.05 }}
-              >
-                <motion.div 
-                    className={`text-3xl font-bold text-${stat.color}-600 dark:text-${stat.color}-400 mb-2`}
-                  whileHover={{ scale: 1.1 }}
-                >
+              { value: user.rating?.count || 0, label: 'Logs Reviewed' },
+              { value: user.rating?.average?.toFixed(1) || '0.0', label: 'Rating Metric' },
+              { value: new Date(user.createdAt).getFullYear(), label: 'Initialization' },
+              { value: user.isEmailVerified ? 'Verified' : 'Pending', label: 'Security State' }
+            ].map((stat) => (
+              <div key={stat.label} className="space-y-0.5 text-center sm:text-left border-l border-border/20 pl-4 sm:pl-6">
+                <div className="text-2xl font-light tracking-tight text-primary">
                   {stat.value}
-                </motion.div>
-                  <div className="text-sm text-gray-600 dark:text-gray-400">{stat.label}</div>
-              </motion.div>
+                </div>
+                <div className="text-[10px] font-mono uppercase tracking-wider text-muted-foreground/60">
+                  {stat.label}
+                </div>
+              </div>
             ))}
           </div>
         </motion.div>
 
-        {/* Action Buttons */}
+        {/* BOTTOM GLOBAL ROUTER LINK CTAS CONTROLS */}
         <motion.div 
-          className="mt-8 flex gap-4 justify-center"
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.6, delay: 0.7 }}
+          className="flex items-center justify-center gap-4 pt-4"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: 0.2 }}
         >
-          <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
-            <Link 
-              to="/profile/edit"
-              className="bg-indigo-600 hover:bg-indigo-700 text-white px-8 py-3 rounded-lg font-medium transition-all duration-200 flex items-center gap-2"
-            >
-              <Edit3 className="w-5 h-5" />
-              Edit Profile
-            </Link>
-          </motion.div>
-
-          <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
-            <Link 
-              to="/change-password"
-              className="bg-gray-600 hover:bg-gray-700 text-white px-8 py-3 rounded-lg font-medium transition-all duration-200 flex items-center gap-2"
-            >
-              <Lock className="w-5 h-5" />
-              Change Password
-            </Link>
-          </motion.div>
+          <Link 
+            to="/profile/edit"
+            className="text-xs uppercase tracking-widest font-medium h-12 px-8 bg-foreground text-background hover:opacity-90 rounded-xl flex items-center gap-2 transition-opacity"
+          >
+            <Edit3 className="w-4 h-4" /> Edit Profile
+          </Link>
+          <Link 
+            to="/change-password"
+            className="text-xs uppercase tracking-widest font-medium h-12 px-8 border border-border/40 hover:bg-muted text-muted-foreground hover:text-foreground rounded-xl flex items-center gap-2 transition-all"
+          >
+            <Lock className="w-4 h-4 stroke-[1.75]" /> Update Password
+          </Link>
         </motion.div>
+
       </div>
-    </motion.div>
+    </div>
   );
 }

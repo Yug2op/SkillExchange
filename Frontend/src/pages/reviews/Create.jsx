@@ -9,38 +9,21 @@ import { toast } from 'sonner';
 
 // shadcn/ui components
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
-import { Checkbox } from '@/components/ui/checkbox';
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-  AlertDialogTrigger,
-} from '@/components/ui/alert-dialog';
 
 // Icons
 import {
   ArrowLeft,
   Star,
-  MessageSquare,
-  User,
   Award,
-  Target,
-  CheckCircle2,
   AlertCircle,
   Send,
   Eye,
-  EyeOff
+  EyeOff,
+  Sparkles,
+  Loader2
 } from 'lucide-react';
 
 export default function CreateReviewPage() {
@@ -65,7 +48,7 @@ export default function CreateReviewPage() {
 
   const [hoveredRating, setHoveredRating] = useState(0);
 
-  // Get exchange details
+  // Get exchange details safely
   const { data: exchangeData, isLoading: exchangeLoading } = useQuery({
     queryKey: ['exchange', exchangeId],
     queryFn: () => getExchange(exchangeId),
@@ -76,7 +59,7 @@ export default function CreateReviewPage() {
   const isSender = exchange?.sender?._id === currentUserId;
   const otherUser = isSender ? exchange?.receiver : exchange?.sender;
 
-  // Create review mutation
+  // Create review mutation keeping your query invalidate paths intact
   const createReviewMutation = useMutation({
     mutationFn: createReview,
     onSuccess: () => {
@@ -129,274 +112,226 @@ export default function CreateReviewPage() {
 
   if (exchangeLoading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900">
-        <div className="container mx-auto px-4 py-8">
-          <div className="max-w-2xl mx-auto">
-            <div className="animate-pulse space-y-6">
-              <div className="h-8 bg-gray-200 dark:bg-gray-700 rounded w-1/3"></div>
-              <div className="h-64 bg-gray-200 dark:bg-gray-700 rounded-lg"></div>
-            </div>
+      <div className="min-h-screen bg-background text-foreground flex items-center justify-center">
+            <BrandLoader/>
           </div>
-        </div>
-      </div>
     );
   }
 
   if (!exchange) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900">
-        <div className="container mx-auto px-4 py-8">
-          <motion.div
-            initial={{ scale: 0.9, opacity: 0 }}
-            animate={{ scale: 1, opacity: 1 }}
-            className="max-w-md mx-auto text-center"
-          >
-            <AlertCircle className="h-16 w-16 text-red-500 mx-auto mb-4" />
-            <h2 className="text-2xl font-bold mb-2">Exchange Not Found</h2>
-            <p className="text-muted-foreground mb-6">
-              The exchange you're trying to review doesn't exist.
-            </p>
-            <Button asChild>
-              <Link to="/exchanges">
-                <ArrowLeft className="mr-2 h-4 w-4" />
-                Back to Exchanges
-              </Link>
-            </Button>
-          </motion.div>
-        </div>
+      <div className="min-h-screen bg-background text-foreground flex items-center justify-center px-6">
+        <motion.div initial={{ opacity: 0, scale: 0.98 }} animate={{ opacity: 1, scale: 1 }} className="text-center max-w-sm space-y-6">
+          <div className="h-12 w-12 rounded-full bg-destructive/10 text-destructive flex items-center justify-center mx-auto">
+            <AlertCircle className="h-5 w-5" />
+          </div>
+          <div className="space-y-1">
+            <h3 className="text-xl font-medium tracking-tight">Exchange Log Absent</h3>
+            <p className="text-sm text-muted-foreground/80 font-light leading-relaxed">The target tracking transaction context you are attempting to review does not exist.</p>
+          </div>
+          <Button asChild className="w-full text-xs uppercase tracking-widest font-medium py-5 rounded-lg bg-foreground text-background">
+            <Link to="/exchanges"><ArrowLeft className="mr-2 h-3.5 w-3.5" /> Return to Transactions</Link>
+          </Button>
+        </motion.div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900">
-      <div className="container mx-auto px-4 py-8">
-        <div className="max-w-2xl mx-auto space-y-8">
-          {/* Header */}
-          <motion.div
-            initial={{ y: -20, opacity: 0 }}
-            animate={{ y: 0, opacity: 1 }}
-            className="flex items-center gap-4"
-          >
-            <Button variant="outline" size="sm" asChild>
-              <Link to="/exchanges">
-                <ArrowLeft className="h-4 w-4 mr-2" />
-                Back to Exchanges
-              </Link>
-            </Button>
-            <div>
-              <h1 className="text-2xl font-bold">Write a Review</h1>
-              <p className="text-muted-foreground">
-                Share your experience with {otherUser?.name}
-              </p>
+    <div className="min-h-screen bg-background text-foreground antialiased selection:bg-primary/20 transition-colors duration-300">
+      <div className="max-w-2xl mx-auto px-6 py-16 space-y-12">
+        
+        {/* INTERFACE BREADCRUMB HEADER */}
+        <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} className="space-y-4">
+          <Button variant="ghost" size="sm" asChild className="text-xs uppercase tracking-widest font-medium h-9 px-3 -ml-3 hover:bg-muted/60">
+            <Link to="/exchanges">
+              <ArrowLeft className="h-3.5 w-3.5 mr-2" /> Back to Exchanges
+            </Link>
+          </Button>
+          <div className="pt-2">
+            <h1 className="text-4xl font-light tracking-tighter leading-none">Write a Review.</h1>
+            <p className="text-sm text-muted-foreground font-light mt-3">
+              Share your experience with <span className="font-medium text-foreground">{otherUser?.name}</span>
+            </p>
+          </div>
+        </motion.div>
+
+        {/* COMPACT TRANSACTION MATRIX FEEDBACK */}
+        <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.05 }} className="border border-border/30 bg-card rounded-2xl p-6 space-y-4">
+          <div className="flex items-center gap-2 text-xs font-mono uppercase tracking-widest text-primary font-medium">
+            <Award className="h-4 w-4" /> <span>Exchange Summary</span>
+          </div>
+          
+          <div className="text-sm font-light text-muted-foreground leading-relaxed">
+            {isSender 
+              ? `You learned ${exchange?.skillRequested} from ${otherUser?.name}`
+              : `${otherUser?.name} learned ${exchange?.skillRequested} from you`
+            }
+          </div>
+
+          <div className="grid grid-cols-2 gap-4 pt-4 border-t border-border/20 text-xs font-light">
+            <div className="space-y-0.5">
+              <div className="text-muted-foreground/60 uppercase font-mono tracking-wider text-[10px]">Skill Requested</div>
+              <div className="font-medium text-foreground">{exchange?.skillRequested}</div>
             </div>
-          </motion.div>
+            <div className="space-y-0.5">
+              <div className="text-muted-foreground/60 uppercase font-mono tracking-wider text-[10px]">Skill Offered</div>
+              <div className="font-medium text-foreground">{exchange?.skillOffered}</div>
+            </div>
+          </div>
+        </motion.div>
 
-          {/* Exchange Summary */}
-          <motion.div
-            initial={{ y: 20, opacity: 0 }}
-            animate={{ y: 0, opacity: 1 }}
-            transition={{ delay: 0.1 }}
-          >
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Award className="h-5 w-5 text-primary" />
-                  Exchange Summary
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="flex items-center gap-4">
-                  <Avatar className="h-12 w-12">
-                    <AvatarImage src={otherUser?.profilePic?.url || `https://ui-avatars.com/api/?name=${OtherUser?.name || 'U'}&background=random`} alt={otherUser?.name} loading="lazy" />
-                    <AvatarFallback className="bg-gradient-to-br from-blue-500 to-purple-600 text-white">
-                      {otherUser?.name?.[0]?.toUpperCase() || 'U'}
-                    </AvatarFallback>
-                  </Avatar>
-                  <div className="flex-1">
-                    <div className="font-semibold">{otherUser?.name}</div>
-                    <div className="text-sm text-muted-foreground">
-                      {isSender 
-                        ? `You learned ${exchange?.skillRequested} from ${otherUser?.name}`
-                        : `${otherUser?.name} learned ${exchange?.skillRequested} from you`
-                      }
-                    </div>
-                  </div>
-                </div>
+        {/* INPUT FORM BLOCK MATRIX */}
+        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.1 }}>
+          <form onSubmit={handleSubmit} className="space-y-10">
+            
+            {/* OVERALL STAR RATING NODE */}
+            <div className="space-y-3">
+              <Label className="text-xs uppercase tracking-widest text-muted-foreground/80 font-mono font-medium">Overall Rating *</Label>
+              <div className="flex items-center gap-1">
+                {[1, 2, 3, 4, 5].map((rating) => (
+                  <button
+                    key={rating}
+                    type="button"
+                    onMouseEnter={() => setHoveredRating(rating)}
+                    onMouseLeave={() => setHoveredRating(0)}
+                    onClick={() => handleRatingClick(rating)}
+                    className="p-1 hover:scale-110 transition-all duration-150 outline-none"
+                  >
+                    <Star
+                      className={`h-7 w-7 transition-colors ${
+                        rating <= (hoveredRating || formData.rating)
+                          ? 'fill-secondary text-secondary'
+                          : 'text-border/80 hover:text-secondary/50'
+                      }`}
+                    />
+                  </button>
+                ))}
+                <span className="ml-4 text-xs font-light text-muted-foreground font-mono uppercase tracking-wider">
+                  {formData.rating > 0 ? `${formData.rating} / 5 selected` : 'Awaiting input'}
+                </span>
+              </div>
+            </div>
 
-                <div className="grid grid-cols-2 gap-4 pt-4 border-t">
-                  <div>
-                    <div className="text-sm font-medium text-muted-foreground">Skill Requested</div>
-                    <div className="font-medium">{exchange?.skillRequested}</div>
-                  </div>
-                  <div>
-                    <div className="text-sm font-medium text-muted-foreground">Skill Offered</div>
-                    <div className="font-medium">{exchange?.skillOffered}</div>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          </motion.div>
-
-          {/* Review Form */}
-          <motion.div
-            initial={{ y: 20, opacity: 0 }}
-            animate={{ y: 0, opacity: 1 }}
-            transition={{ delay: 0.2 }}
-          >
-            <Card>
-              <CardHeader>
-                <CardTitle>Your Review</CardTitle>
-                <CardDescription>
-                  Help others by sharing your experience with this skill exchange
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <form onSubmit={handleSubmit} className="space-y-6">
-                  {/* Overall Rating */}
-                  <div className="space-y-3">
-                    <Label className="text-base font-medium">Overall Rating *</Label>
-                    <div className="flex items-center gap-2">
+            {/* SEGMENTED ASPECT SUB-RATINGS */}
+            <div className="space-y-4 pt-2 border-t border-border/20">
+              <Label className="text-xs uppercase tracking-widest text-muted-foreground/80 font-mono font-medium block">Detailed Ratings</Label>
+              <div className="grid gap-6 sm:grid-cols-2">
+                {[
+                  { key: 'communication', label: 'Communication' },
+                  { key: 'knowledge', label: 'Knowledge & Expertise' },
+                  { key: 'punctuality', label: 'Punctuality' },
+                  { key: 'patience', label: 'Patience & Teaching Style' }
+                ].map(({ key, label }) => (
+                  <div key={key} className="space-y-2.5 p-4 border border-border/30 bg-card/40 rounded-xl flex items-center justify-between gap-4">
+                    <Label className="text-xs font-light text-foreground/80">{label}</Label>
+                    <div className="flex items-center gap-1 shrink-0">
                       {[1, 2, 3, 4, 5].map((rating) => (
                         <button
                           key={rating}
                           type="button"
-                          onMouseEnter={() => setHoveredRating(rating)}
-                          onMouseLeave={() => setHoveredRating(0)}
-                          onClick={() => handleRatingClick(rating)}
-                          className="p-1 hover:scale-110 transition-transform"
+                          onClick={() => handleAspectRatingChange(key, rating)}
+                          className={`h-6 w-6 font-mono text-[10px] font-medium rounded border transition-all ${
+                            rating <= formData.aspectRatings[key]
+                              ? 'bg-foreground text-background border-foreground'
+                              : 'bg-transparent text-muted-foreground border-border/60 hover:border-foreground/30'
+                          }`}
                         >
-                          <Star
-                            className={`h-8 w-8 ${
-                              rating <= (hoveredRating || formData.rating)
-                                ? 'fill-yellow-400 text-yellow-400'
-                                : 'text-gray-300 hover:text-yellow-300'
-                            }`}
-                          />
+                          {rating}
                         </button>
                       ))}
-                      <span className="ml-3 text-sm text-muted-foreground">
-                        {formData.rating > 0 ? `${formData.rating} out of 5 stars` : 'Select a rating'}
-                      </span>
                     </div>
                   </div>
+                ))}
+              </div>
+            </div>
 
-                  {/* Aspect Ratings */}
-                  <div className="space-y-4">
-                    <Label className="text-base font-medium">Detailed Ratings</Label>
-                    <div className="grid gap-4 sm:grid-cols-2">
-                      {[
-                        { key: 'communication', label: 'Communication' },
-                        { key: 'knowledge', label: 'Knowledge & Expertise' },
-                        { key: 'punctuality', label: 'Punctuality' },
-                        { key: 'patience', label: 'Patience & Teaching Style' }
-                      ].map(({ key, label }) => (
-                        <div key={key} className="space-y-2">
-                          <Label className="text-sm">{label}</Label>
-                          <div className="flex items-center gap-2">
-                            {[1, 2, 3, 4, 5].map((rating) => (
-                              <button
-                                key={rating}
-                                type="button"
-                                onClick={() => handleAspectRatingChange(key, rating)}
-                                className={`p-1 rounded ${
-                                  rating <= formData.aspectRatings[key]
-                                    ? 'bg-yellow-400 text-white'
-                                    : 'bg-gray-200 hover:bg-gray-300'
-                                }`}
-                              >
-                                <span className="text-xs font-medium">{rating}</span>
-                              </button>
-                            ))}
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
+            {/* INPUT CHIP ELEMENT - SKILL MATRIX INLINE TYPE */}
+            <div className="space-y-2 pt-2 border-t border-border/20">
+              <Label htmlFor="skillTaught" className="text-xs uppercase tracking-widest text-muted-foreground/80 font-mono font-medium">What skill did you learn? (Optional)</Label>
+              <div className="relative border-b border-border/60 focus-within:border-foreground transition-colors duration-200 py-1">
+                <input
+                  id="skillTaught"
+                  type="text"
+                  value={formData.skillTaught}
+                  onChange={(e) => setFormData(prev => ({ ...prev, skillTaught: e.target.value }))}
+                  placeholder="e.g., React Hooks, Advanced JavaScript, etc."
+                  className="w-full bg-transparent px-0 h-9 text-sm focus:outline-none focus:ring-0 placeholder:text-muted-foreground/30 font-light"
+                />
+              </div>
+            </div>
 
-                  {/* Skill Taught */}
-                  <div className="space-y-2">
-                    <Label htmlFor="skillTaught">What skill did you learn? (Optional)</Label>
-                    <input
-                      id="skillTaught"
-                      type="text"
-                      value={formData.skillTaught}
-                      onChange={(e) => setFormData(prev => ({ ...prev, skillTaught: e.target.value }))}
-                      placeholder="e.g., React Hooks, Advanced JavaScript, etc."
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary"
-                    />
-                  </div>
+            {/* LARGE TEXTAREA DESCRIPTION INPUT CONTAINER */}
+            <div className="space-y-2">
+              <Label htmlFor="feedback" className="text-xs uppercase tracking-widest text-muted-foreground/80 font-mono font-medium">Your Experience (Optional)</Label>
+              <div className="border border-border/40 focus-within:border-foreground/60 rounded-xl p-3 bg-card transition-colors">
+                <Textarea
+                  id="feedback"
+                  value={formData.feedback}
+                  onChange={(e) => setFormData(prev => ({ ...prev, feedback: e.target.value }))}
+                  placeholder="Share your experience, what went well, what could be improved..."
+                  rows={4}
+                  maxLength={500}
+                  className="resize-none border-0 bg-transparent p-0 focus-visible:ring-0 focus-visible:ring-offset-0 placeholder:text-muted-foreground/30 font-light text-sm shadow-none"
+                />
+                <div className="text-right text-[10px] font-mono text-muted-foreground/40 pt-2">
+                  {formData.feedback.length} / 500 characters
+                </div>
+              </div>
+            </div>
 
-                  {/* Feedback */}
-                  <div className="space-y-2">
-                    <Label htmlFor="feedback">Your Experience (Optional)</Label>
-                    <Textarea
-                      id="feedback"
-                      value={formData.feedback}
-                      onChange={(e) => setFormData(prev => ({ ...prev, feedback: e.target.value }))}
-                      placeholder="Share your experience, what went well, what could be improved..."
-                      rows={4}
-                      className="resize-none"
-                    />
-                    <p className="text-xs text-muted-foreground">
-                      {formData.feedback.length}/500 characters
-                    </p>
-                  </div>
+            {/* RADIO BUTTON PRIVACY SELECTION GROUPS */}
+            <div className="space-y-4 pt-4 border-t border-border/20">
+              <Label className="text-xs uppercase tracking-widest text-muted-foreground/80 font-mono font-medium block">Privacy Setting</Label>
+              <RadioGroup
+                value={formData.isPublic ? 'public' : 'private'}
+                onValueChange={(value) => setFormData(prev => ({ ...prev, isPublic: value === 'public' }))}
+                className="gap-3"
+              >
+                <div className="flex items-center space-x-3 cursor-pointer group">
+                  <RadioGroupItem value="public" id="public" className="data-[state=checked]:bg-primary" />
+                  <Label htmlFor="public" className="flex items-center gap-2 text-xs font-light text-muted-foreground group-hover:text-foreground transition-colors cursor-pointer">
+                    <Eye className="h-3.5 w-3.5 text-primary stroke-[1.5]" />
+                    Public - Visible to all users
+                  </Label>
+                </div>
+                <div className="flex items-center space-x-3 cursor-pointer group">
+                  <RadioGroupItem value="private" id="private" className="data-[state=checked]:bg-primary" />
+                  <Label htmlFor="private" className="flex items-center gap-2 text-xs font-light text-muted-foreground group-hover:text-foreground transition-colors cursor-pointer">
+                    <EyeOff className="h-3.5 w-3.5 text-muted-foreground stroke-[1.5]" />
+                    Private - Only visible to you
+                  </Label>
+                </div>
+              </RadioGroup>
+            </div>
 
-                  {/* Privacy Setting */}
-                  <div className="space-y-3">
-                    <Label className="text-base font-medium">Privacy Setting</Label>
-                    <RadioGroup
-                      value={formData.isPublic ? 'public' : 'private'}
-                      onValueChange={(value) => setFormData(prev => ({ ...prev, isPublic: value === 'public' }))}
-                    >
-                      <div className="flex items-center space-x-2">
-                        <RadioGroupItem value="public" id="public" />
-                        <Label htmlFor="public" className="flex items-center gap-2">
-                          <Eye className="h-4 w-4" />
-                          Public - Visible to all users
-                        </Label>
-                      </div>
-                      <div className="flex items-center space-x-2">
-                        <RadioGroupItem value="private" id="private" />
-                        <Label htmlFor="private" className="flex items-center gap-2">
-                          <EyeOff className="h-4 w-4" />
-                          Private - Only visible to you
-                        </Label>
-                      </div>
-                    </RadioGroup>
-                  </div>
+            {/* SUBMIT BUTTON CONTROL ACTIONS LOOP */}
+            <div className="flex gap-4 pt-4 border-t border-border/20">
+              <Button
+                type="button"
+                variant="ghost"
+                onClick={() => navigate('/exchanges')}
+                className="flex-1 text-xs uppercase tracking-widest font-medium py-6 border border-border/40 hover:bg-muted/60 rounded-xl transition-all"
+              >
+                Cancel
+              </Button>
+              <Button
+                type="submit"
+                disabled={createReviewMutation.isPending || formData.rating === 0}
+                className="flex-1 text-xs uppercase tracking-widest font-medium py-6 rounded-xl bg-foreground text-background hover:opacity-90 transition-opacity gap-2"
+              >
+                {createReviewMutation.isPending ? (
+                  'Submitting Sequence...'
+                ) : (
+                  <>
+                    <Send className="h-3.5 w-3.5" /> Submit Review
+                  </>
+                )}
+              </Button>
+            </div>
 
-                  {/* Submit Button */}
-                  <div className="flex gap-3 pt-4">
-                    <Button
-                      type="button"
-                      variant="outline"
-                      onClick={() => navigate('/exchanges')}
-                      className="flex-1"
-                    >
-                      Cancel
-                    </Button>
-                    <Button
-                      type="submit"
-                      disabled={createReviewMutation.isPending || formData.rating === 0}
-                      className="flex-1 gap-2"
-                    >
-                      {createReviewMutation.isPending ? (
-                        'Submitting...'
-                      ) : (
-                        <>
-                          <Send className="h-4 w-4" />
-                          Submit Review
-                        </>
-                      )}
-                    </Button>
-                  </div>
-                </form>
-              </CardContent>
-            </Card>
-          </motion.div>
-        </div>
+          </form>
+        </motion.div>
       </div>
     </div>
   );

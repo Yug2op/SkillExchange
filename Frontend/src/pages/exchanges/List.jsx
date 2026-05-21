@@ -10,7 +10,6 @@ import { useMe } from '@/hooks/useMe';
 
 // shadcn/ui components
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -26,7 +25,6 @@ import { Input } from '@/components/ui/input';
 // Icons
 import {
   Search,
-  Filter,
   Plus,
   Calendar,
   Clock,
@@ -35,49 +33,39 @@ import {
   AlertCircle,
   Award,
   Users,
-  TrendingUp,
-  MessageSquare,
   Eye,
   Star,
   ArrowRight,
-  BookOpen,
-  GraduationCap,
-  Target,
-  User,
-  Mail,
-  MapPin,
-  Video,
-  Building,
-  Coffee
+  Loader2
 } from 'lucide-react';
 
 const statusConfig = {
   pending: {
-    color: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-300',
+    color: 'bg-secondary text-foreground border-border/40',
     icon: Clock,
     label: 'Pending',
     description: 'Waiting for response'
   },
   accepted: {
-    color: 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300',
+    color: 'bg-primary/10 text-primary border-primary/20',
     icon: CheckCircle2,
     label: 'Accepted',
     description: 'Ready to schedule'
   },
   rejected: {
-    color: 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300',
+    color: 'bg-destructive/10 text-destructive border-destructive/20',
     icon: XCircle,
     label: 'Rejected',
     description: 'Exchange declined'
   },
   completed: {
-    color: 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300',
+    color: 'bg-secondary text-primary border-primary/20',
     icon: Award,
     label: 'Completed',
     description: 'Successfully finished'
   },
   cancelled: {
-    color: 'bg-gray-100 text-gray-800 dark:bg-gray-900/30 dark:text-gray-300',
+    color: 'bg-muted text-muted-foreground border-border/10',
     icon: AlertCircle,
     label: 'Cancelled',
     description: 'Exchange cancelled'
@@ -100,7 +88,7 @@ export default function ExchangesPage() {
   
   const exchanges = data?.data?.exchanges || [];
 
-  // Filter and sort exchanges
+  // Filter and sort exchanges matrix safely
   const filteredExchanges = useMemo(() => {
     let filtered = exchanges.filter(exchange => {
       if (!exchange?._id || !exchange?.sender || !exchange?.receiver) return false;
@@ -125,7 +113,7 @@ export default function ExchangesPage() {
       return true;
     });
 
-    // Sort exchanges
+    // Sort loops
     filtered.sort((a, b) => {
       switch (sortBy) {
         case 'recent':
@@ -146,7 +134,7 @@ export default function ExchangesPage() {
     return filtered;
   }, [exchanges, searchQuery, statusFilter, sortBy, currentUserId]);
 
-  // Calculate stats
+  // Calculate stats parameters
   const stats = useMemo(() => {
     return {
       total: exchanges.length,
@@ -157,34 +145,21 @@ export default function ExchangesPage() {
     };
   }, [exchanges]);
 
-  const getExchangeInfo = (exchange) => {
-    const isSender = exchange.sender._id === currentUserId;
-    const otherUser = isSender ? exchange.receiver : exchange.sender;
-
-    return {
-      isSender,
-      otherUser,
-      direction: isSender ? 'sent' : 'received',
-      title: isSender
-        ? `You want to learn ${exchange.skillRequested} from ${otherUser.name}`
-        : `${otherUser.name} wants to learn ${exchange.skillRequested} from you`,
-      subtitle: `In exchange for ${exchange.skillOffered}`
-    };
-  };
-
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900">
-        <div className="container mx-auto px-4 py-8">
-          <div className="max-w-6xl mx-auto">
-            <div className="animate-pulse space-y-6">
-              <div className="h-8 bg-gray-200 dark:bg-gray-700 rounded w-1/3"></div>
-              <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-                {[...Array(6)].map((_, i) => (
-                  <div key={i} className="h-48 bg-gray-200 dark:bg-gray-700 rounded-lg"></div>
-                ))}
+      <div className="min-h-screen bg-background text-foreground max-w-7xl mx-auto px-6 py-16">
+        <div className="animate-pulse space-y-12">
+          <div className="h-10 bg-muted rounded-xl w-1/4" />
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
+            {[...Array(5)].map((_, i) => <div key={i} className="h-20 bg-muted rounded-xl" />)}
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-x-12 gap-y-16">
+            {[...Array(6)].map((_, i) => (
+              <div key={i} className="space-y-4">
+                <div className="h-8 bg-muted rounded w-1/2" />
+                <div className="h-24 bg-muted rounded-xl" />
               </div>
-            </div>
+            ))}
           </div>
         </div>
       </div>
@@ -193,117 +168,88 @@ export default function ExchangesPage() {
 
   if (isError) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900">
-        <div className="container mx-auto px-4 py-8">
-          <motion.div
-            initial={{ scale: 0.9, opacity: 0 }}
-            animate={{ scale: 1, opacity: 1 }}
-            className="max-w-md mx-auto text-center"
-          >
-            <AlertCircle className="h-16 w-16 text-red-500 mx-auto mb-4" />
-            <h2 className="text-2xl font-bold mb-2">Failed to Load Exchanges</h2>
-            <p className="text-muted-foreground mb-6">
-              Something went wrong loading your exchanges. Please try again.
-            </p>
-            <Button onClick={() => window.location.reload()} variant="outline">
-              Try Again
-            </Button>
-          </motion.div>
+      <div className="min-h-screen bg-background text-foreground flex items-center justify-center px-6">
+        <div className="text-center max-w-sm space-y-6">
+          <div className="h-12 w-12 rounded-full bg-destructive/10 text-destructive flex items-center justify-center mx-auto">
+            <AlertCircle className="h-5 w-5" />
+          </div>
+          <div className="space-y-1">
+            <h3 className="text-xl font-medium tracking-tight">Sync Failure</h3>
+            <p className="text-sm text-muted-foreground/80 font-light leading-relaxed">Something went wrong loading your exchanges. Please try again.</p>
+          </div>
+          <Button onClick={() => window.location.reload()} className="w-full text-xs uppercase tracking-widest font-medium py-5 rounded-lg bg-foreground text-background">
+            Re-index Transaction Array
+          </Button>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900">
-      <div className="container mx-auto px-4 py-8">
-        <div className="max-w-6xl mx-auto space-y-8">
-          {/* Header */}
-          <motion.div
-            initial={{ y: -20, opacity: 0 }}
-            animate={{ y: 0, opacity: 1 }}
-            className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4"
-          >
-            <div>
-              <h1 className="text-3xl font-bold flex items-center gap-3">
-                <Users className="h-8 w-8 text-primary" />
-                My Exchanges
-              </h1>
-              <p className="text-muted-foreground mt-1">
-                Manage your skill exchange requests and sessions
-              </p>
-            </div>
+    <div className="min-h-screen bg-background text-foreground antialiased selection:bg-primary/20 transition-colors duration-300">
+      <div className="max-w-7xl mx-auto px-6 py-16 space-y-12">
+        
+        {/* TOP LEVEL ROUTING COMPONENT HEADER BLOCK */}
+        <motion.div initial={{ y: -10, opacity: 0 }} animate={{ y: 0, opacity: 1 }} className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-6">
+          <div className="space-y-2">
+            <h1 className="text-4xl font-light tracking-tighter leading-none flex items-center gap-3">
+              <Users className="h-7 w-7 text-primary stroke-[1.25]" /> My Exchanges.
+            </h1>
+            <p className="text-sm text-muted-foreground font-light">
+              Manage your skill exchange requests and active session logs natively.
+            </p>
+          </div>
 
-            <Button asChild className="gap-2">
-              <Link to="/search">
-                <Plus className="h-4 w-4" />
-                Find New Exchange
-              </Link>
-            </Button>
-          </motion.div>
+          <Button asChild variant="outline" className="text-xs uppercase tracking-widest font-medium h-11 px-5 border border-border/40 hover:bg-muted/60 bg-card text-foreground rounded-lg gap-2 self-start sm:self-auto transition-all">
+            <Link to="/search">
+              <Plus className="h-3.5 w-3.5" /> Find New Exchange
+            </Link>
+          </Button>
+        </motion.div>
 
-          {/* Stats Cards */}
-          <motion.div
-            initial={{ y: 20, opacity: 0 }}
-            animate={{ y: 0, opacity: 1 }}
-            transition={{ delay: 0.1 }}
-            className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5"
-          >
-            <Card className="text-center">
-              <CardContent className="pt-6">
-                <div className="text-2xl font-bold text-primary">{stats.total}</div>
-                <div className="text-sm text-muted-foreground">Total</div>
-              </CardContent>
-            </Card>
-            <Card className="text-center">
-              <CardContent className="pt-6">
-                <div className="text-2xl font-bold text-yellow-600">{stats.pending}</div>
-                <div className="text-sm text-muted-foreground">Pending</div>
-              </CardContent>
-            </Card>
-            <Card className="text-center">
-              <CardContent className="pt-6">
-                <div className="text-2xl font-bold text-green-600">{stats.accepted}</div>
-                <div className="text-sm text-muted-foreground">Accepted</div>
-              </CardContent>
-            </Card>
-            <Card className="text-center">
-              <CardContent className="pt-6">
-                <div className="text-2xl font-bold text-blue-600">{stats.completed}</div>
-                <div className="text-sm text-muted-foreground">Completed</div>
-              </CardContent>
-            </Card>
-            <Card className="text-center">
-              <CardContent className="pt-6">
-                <div className="text-2xl font-bold text-red-600">{stats.rejected}</div>
-                <div className="text-sm text-muted-foreground">Rejected</div>
-              </CardContent>
-            </Card>
-          </motion.div>
+        {/* CORE ANALYTICS METRIC BAR PANELS */}
+        <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.05 }} className="grid gap-4 grid-cols-2 sm:grid-cols-3 lg:grid-cols-5">
+          <div className="p-5 border border-border/30 bg-card rounded-xl">
+            <div className="text-2xl font-light text-foreground">{stats.total}</div>
+            <div className="text-[10px] uppercase tracking-widest font-mono text-muted-foreground mt-1">Total Tracks</div>
+          </div>
+          <div className="p-5 border border-border/30 bg-card rounded-xl">
+            <div className="text-2xl font-light text-secondary">{stats.pending}</div>
+            <div className="text-[10px] uppercase tracking-widest font-mono text-muted-foreground mt-1">Pending Sync</div>
+          </div>
+          <div className="p-5 border border-border/30 bg-card rounded-xl">
+            <div className="text-2xl font-light text-primary">{stats.accepted}</div>
+            <div className="text-[10px] uppercase tracking-widest font-mono text-muted-foreground mt-1">Accepted Hubs</div>
+          </div>
+          <div className="p-5 border border-border/30 bg-card rounded-xl">
+            <div className="text-2xl font-light text-foreground">{stats.completed}</div>
+            <div className="text-[10px] uppercase tracking-widest font-mono text-muted-foreground mt-1">Completed Logs</div>
+          </div>
+          <div className="p-5 border border-border/30 bg-card rounded-xl col-span-2 sm:col-span-1">
+            <div className="text-2xl font-light text-muted-foreground/60">{stats.rejected}</div>
+            <div className="text-[10px] uppercase tracking-widest font-mono text-muted-foreground mt-1">Declined Matrices</div>
+          </div>
+        </motion.div>
 
-          {/* Filters and Search */}
-          <motion.div
-            initial={{ y: 20, opacity: 0 }}
-            animate={{ y: 0, opacity: 1 }}
-            transition={{ delay: 0.2 }}
-            className="flex flex-col sm:flex-row gap-4"
-          >
-            <div className="relative flex-1">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-              <Input
-                placeholder="Search exchanges by name, skills, or message..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-10"
-              />
-            </div>
+        {/* CONTROLS STRIATION FILTER FORM INPUTS BAR */}
+        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.1 }} className="flex flex-col md:flex-row gap-4 pt-2">
+          <div className="relative flex-1 border-b border-border/60 focus-within:border-foreground transition-colors duration-200 py-1.5 group">
+            <Search className="absolute left-0 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground/30 group-focus-within:text-foreground transition-colors" />
+            <Input
+              placeholder="Query logs by name, skillsets, or message arrays..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="border-0 bg-transparent pl-7 pr-0 h-8 text-sm focus-visible:ring-0 focus-visible:ring-offset-0 placeholder:text-muted-foreground/30 font-light"
+            />
+          </div>
 
+          <div className="flex items-center gap-3 flex-wrap">
             <Select value={statusFilter} onValueChange={setStatusFilter}>
-              <SelectTrigger className="w-[140px]">
-                <SelectValue />
+              <SelectTrigger className="w-[140px] h-10 rounded-lg bg-card border-border/40 focus:ring-0">
+                <SelectValue placeholder="All Status" />
               </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Status</SelectItem>
+              <SelectContent className="bg-card text-foreground border-border/40">
+                <SelectItem value="all">All States</SelectItem>
                 <SelectItem value="pending">Pending</SelectItem>
                 <SelectItem value="accepted">Accepted</SelectItem>
                 <SelectItem value="completed">Completed</SelectItem>
@@ -312,236 +258,189 @@ export default function ExchangesPage() {
             </Select>
 
             <Select value={sortBy} onValueChange={setSortBy}>
-              <SelectTrigger className="w-[140px]">
-                <SelectValue />
+              <SelectTrigger className="w-[140px] h-10 rounded-lg bg-card border-border/40 focus:ring-0">
+                <SelectValue placeholder="Sort Array" />
               </SelectTrigger>
-              <SelectContent>
+              <SelectContent className="bg-card text-foreground border-border/40">
                 <SelectItem value="recent">Most Recent</SelectItem>
                 <SelectItem value="oldest">Oldest First</SelectItem>
-                <SelectItem value="status">By Status</SelectItem>
-                <SelectItem value="name">By Name</SelectItem>
+                <SelectItem value="status">By State Alpha</SelectItem>
+                <SelectItem value="name">By Peer Name</SelectItem>
               </SelectContent>
             </Select>
-          </motion.div>
+          </div>
+        </motion.div>
 
-          {/* Exchange Tabs */}
-          <motion.div
-            initial={{ y: 20, opacity: 0 }}
-            animate={{ y: 0, opacity: 1 }}
-            transition={{ delay: 0.3 }}
-          >
-            <Tabs defaultValue="all" className="w-full">
-              <TabsList className="grid w-full grid-cols-3">
-                <TabsTrigger value="all">All Exchanges ({stats.total})</TabsTrigger>
-                <TabsTrigger value="active">Active ({stats.pending + stats.accepted})</TabsTrigger>
-                <TabsTrigger value="completed">Completed ({stats.completed})</TabsTrigger>
-              </TabsList>
+        {/* TAB MATRIX CHANNELS DISPLAY MANAGEMENT */}
+        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.15 }}>
+          <Tabs defaultValue="all" className="w-full space-y-8">
+            <TabsList className="w-full h-auto p-0 bg-transparent border-b border-border/30 rounded-none justify-start gap-4">
+              <TabsTrigger value="all" className="h-10 px-4 rounded-none bg-transparent border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent text-xs font-medium uppercase tracking-widest text-muted-foreground data-[state=active]:text-foreground transition-all">
+                All Transactions ({stats.total})
+              </TabsTrigger>
+              <TabsTrigger value="active" className="h-10 px-4 rounded-none bg-transparent border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent text-xs font-medium uppercase tracking-widest text-muted-foreground data-[state=active]:text-foreground transition-all">
+                Active Vectors ({stats.pending + stats.accepted})
+              </TabsTrigger>
+              <TabsTrigger value="completed" className="h-10 px-4 rounded-none bg-transparent border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent text-xs font-medium uppercase tracking-widest text-muted-foreground data-[state=active]:text-foreground transition-all">
+                Resolved Logs ({stats.completed})
+              </TabsTrigger>
+            </TabsList>
 
-              <TabsContent value="all" className="mt-6">
-                <ExchangeList exchanges={filteredExchanges} currentUserId={currentUserId} />
-              </TabsContent>
+            <TabsContent value="all" className="mt-8 outline-none">
+              <ExchangeList exchanges={filteredExchanges} currentUserId={currentUserId} />
+            </TabsContent>
 
-              <TabsContent value="active" className="mt-6">
-                <ExchangeList
-                  exchanges={filteredExchanges.filter(e => ['pending', 'accepted'].includes(e.status?.toLowerCase()))}
-                  currentUserId={currentUserId}
-                />
-              </TabsContent>
+            <TabsContent value="active" className="mt-8 outline-none">
+              <ExchangeList
+                exchanges={filteredExchanges.filter(e => ['pending', 'accepted'].includes(e.status?.toLowerCase()))}
+                currentUserId={currentUserId}
+              />
+            </TabsContent>
 
-              <TabsContent value="completed" className="mt-6">
-                <ExchangeList
-                  exchanges={filteredExchanges.filter(e => e.status?.toLowerCase() === 'completed')}
-                  currentUserId={currentUserId}
-                />
-              </TabsContent>
-            </Tabs>
-          </motion.div>
-        </div>
+            <TabsContent value="completed" className="mt-8 outline-none">
+              <ExchangeList
+                exchanges={filteredExchanges.filter(e => e.status?.toLowerCase() === 'completed')}
+                currentUserId={currentUserId}
+              />
+            </TabsContent>
+          </Tabs>
+        </motion.div>
+        
       </div>
     </div>
   );
 }
 
-// Exchange List Component
 function ExchangeList({ exchanges, currentUserId }) {
-
-  // ✅ ADD: Move review checks outside the map function
+  // Parallel asynchronous lookup array resolved cleanly outside component layout map loops
   const { data: reviewChecks } = useQuery({
     queryKey: ['review-checks', currentUserId, exchanges.map(e => e._id).join(',')],
     queryFn: async () => {
       if (!currentUserId || exchanges.length === 0) return {};
-      
       const completedExchanges = exchanges.filter(e => e.status === 'completed');
       if (completedExchanges.length === 0) return {};
       
-      const reviewPromises = completedExchanges.map(exchange => 
-        checkReviewExists(exchange._id)
-      );
-      
-      const results = await Promise.all(reviewPromises);
+      const results = await Promise.all(completedExchanges.map(exchange => checkReviewExists(exchange._id)));
       const reviewMap = {};
-      
       completedExchanges.forEach((exchange, index) => {
         reviewMap[exchange._id] = results[index]?.data?.hasReview || false;
       });
-      
       return reviewMap;
     },
     enabled: !!currentUserId && exchanges.length > 0,
   });
+
   if (exchanges.length === 0) {
     return (
-      <motion.div
-        initial={{ scale: 0.9, opacity: 0 }}
-        animate={{ scale: 1, opacity: 1 }}
-        className="text-center py-16 space-y-4"
-      >
-        <div className="h-24 w-24 rounded-full bg-muted flex items-center justify-center mx-auto">
-          <Users className="h-12 w-12 text-muted-foreground" />
-        </div>
-        <div className="space-y-2">
-          <h3 className="text-2xl font-semibold">No exchanges found</h3>
-          <p className="text-muted-foreground max-w-md mx-auto">
-            {exchanges.length === 0
-              ? 'Start by finding someone to exchange skills with!'
-              : 'Try adjusting your filters to see more exchanges.'
-            }
-          </p>
-        </div>
-        <Button asChild variant="outline">
-          <Link to="/search">
-            <Search className="mr-2 h-4 w-4" />
-            Find Exchange Partners
-          </Link>
+      <motion.div initial={{ opacity: 0, scale: 0.99 }} animate={{ opacity: 1, scale: 1 }} className="text-center py-20 max-w-sm mx-auto space-y-4">
+        <p className="text-sm text-muted-foreground font-light leading-relaxed">
+          No transactional exchange trajectories mapped within the active parameters configuration.
+        </p>
+        <Button asChild variant="link" className="text-xs uppercase tracking-wider font-medium text-primary">
+          <Link to="/search">Scan Network Nodes</Link>
         </Button>
       </motion.div>
     );
   }
 
   return (
-    <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-x-12 gap-y-16">
       <AnimatePresence mode="popLayout">
         {exchanges.map((exchange, index) => {
-          const exchangeInfo = {
-            isSender: exchange.sender._id === currentUserId,
-            otherUser: exchange.sender._id === currentUserId ? exchange.receiver : exchange.sender,
-            direction: exchange.sender._id === currentUserId ? 'sent' : 'received',
-            title: exchange.sender._id === currentUserId
-              ? `You want to learn ${exchange.skillRequested} from ${exchange.receiver.name}`
-              : `${exchange.sender.name} wants to learn ${exchange.skillRequested} from you`,
-            subtitle: `In exchange for ${exchange.skillOffered}`
-          };
+          const isSender = exchange.sender._id === currentUserId;
+          const otherUser = isSender ? exchange.receiver : exchange.sender;
+          const direction = isSender ? 'sent' : 'received';
+          
+          const title = isSender
+            ? `You want to learn ${exchange.skillRequested} from ${exchange.receiver.name}`
+            : `${exchange.sender.name} wants to learn ${exchange.skillRequested} from you`;
+          const subtitle = `In exchange for ${exchange.skillOffered}`;
 
           const statusInfo = statusConfig[exchange.status?.toLowerCase()] || statusConfig.pending;
           const StatusIcon = statusInfo.icon;
-
-          // ✅ FIX: Use the review data instead of calling useQuery
           const hasReview = reviewChecks?.[exchange._id] || false;
 
           return (
             <motion.div
               key={exchange._id}
-              initial={{ scale: 0.9, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              exit={{ scale: 0.9, opacity: 0 }}
-              transition={{ delay: index * 0.05 }}
+              initial={{ opacity: 0, y: 12 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.4, delay: Math.min(index * 0.04, 0.3), ease: [0.16, 1, 0.3, 1] }}
+              className="group relative flex flex-col justify-between"
             >
-              <Card className="h-full hover:shadow-xl transition-all duration-300 group cursor-pointer">
-                <CardHeader className="pb-4">
-                  <div className="flex items-start justify-between">
-                    <div className="flex items-center gap-3">
-                      {/* Direction Indicator */}
-                      <div className={`w-10 h-10 rounded-full flex items-center justify-center ${exchangeInfo.direction === 'sent'
-                        ? 'bg-blue-100 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400'
-                        : 'bg-green-100 text-green-600 dark:bg-green-900/30 dark:text-green-400'
-                        }`}>
-                        {exchangeInfo.direction === 'sent' ? <ArrowRight className="h-5 w-5" /> : <User className="h-5 w-5" />}
-                      </div>
-
-                      <div>
-                        {/* Status Badge */}
-                        <Badge className={`${statusInfo.color} gap-1 mb-2`}>
-                          <StatusIcon className="h-3 w-3" />
-                          {statusInfo.label}
-                        </Badge>
-                        <div className="font-semibold text-sm">
-                          {exchangeInfo.direction === 'sent' ? 'Sent Request' : 'Received Request'}
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Date */}
-                    <div className="text-right text-xs text-muted-foreground">
-                      <div>{format(new Date(exchange.createdAt), 'MMM d')}</div>
-                      <div>{format(new Date(exchange.createdAt), 'yyyy')}</div>
-                    </div>
-                  </div>
-                </CardHeader>
-
-                <CardContent className="space-y-4">
-                  {/* User Information */}
+              <div>
+                {/* HEAD LINE COMPONENT META STRIP */}
+                <div className="flex items-start justify-between mb-4">
                   <div className="flex items-center gap-3">
-                    <Avatar className="h-10 w-10">
-                      <AvatarImage src={exchangeInfo.otherUser.profilePic?.url || `https://ui-avatars.com/api/?name=${exchangeInfo?.otherUser?.name || 'U'}&background=random`} alt={exchangeInfo.otherUser.name} loading="lazy"/>
-                      <AvatarFallback className="bg-gradient-to-br from-blue-500 to-purple-600 text-white text-sm">
-                        {exchangeInfo.otherUser.name?.split(' ').map(n => n[0]).join('').toUpperCase() || 'U'}
-                      </AvatarFallback>
-                    </Avatar>
-                    <div className="flex-1">
-                      <div className="font-medium text-sm">{exchangeInfo.otherUser.name}</div>
-                      <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                        <Star className="h-3 w-3 fill-yellow-400 text-yellow-400" />
-                        {exchangeInfo.otherUser.rating?.average?.toFixed(1) || '0.0'}
-                        ({exchangeInfo.otherUser.rating?.count || 0} reviews)
-                      </div>
+                    <div className={`w-8 h-8 rounded-xl border border-border/30 flex items-center justify-center text-muted-foreground ${
+                      direction === 'sent' ? 'bg-background' : 'bg-card'
+                    }`}>
+                      <Plus className={`h-3.5 w-3.5 transition-transform duration-300 group-hover:rotate-45 ${direction === 'sent' ? 'text-primary' : 'text-secondary'}`} />
+                    </div>
+
+                    <div className="space-y-0.5">
+                      <Badge variant="outline" className={`text-[9px] uppercase font-mono tracking-widest py-0.5 px-2 rounded ${statusInfo.color}`}>
+                        <StatusIcon className="h-2.5 w-2.5" /> {statusInfo.label}
+                      </Badge>
                     </div>
                   </div>
 
-                  {/* Exchange Details */}
-                  <div>
-                    <h3 className="font-semibold group-hover:text-primary transition-colors">
-                      {exchangeInfo.title}
-                    </h3>
-                    <p className="text-sm text-muted-foreground mt-1">
-                      {exchangeInfo.subtitle}
-                    </p>
+                  <div className="text-right text-[10px] font-mono font-light text-muted-foreground/40 uppercase tracking-wider">
+                    {format(new Date(exchange.createdAt), 'MMM d, yyyy')}
                   </div>
-
-                  {/* Message (if exists) */}
-                  {exchange.message && (
-                    <div className="bg-muted/50 rounded-lg p-3">
-                      <p className="text-sm italic">"{exchange.message}"</p>
-                    </div>
-                  )}
-
-                  {/* Scheduled Sessions Indicator */}
-                  {exchange.scheduledSessions && exchange.scheduledSessions.length > 0 && (
-                    <div className="flex items-center gap-2 text-sm bg-blue-50 dark:bg-blue-900/20 rounded-lg p-2">
-                      <Calendar className="h-4 w-4 text-blue-600" />
-                      <span className="text-blue-700 dark:text-blue-300">
-                        {exchange.scheduledSessions.length} session{exchange.scheduledSessions.length > 1 ? 's' : ''} scheduled
-                      </span>
-                    </div>
-                  )}
-                </CardContent>
-
-                <div className="p-6 pt-0">
-                  <Button asChild className="w-full gap-2" variant="outline">
-                    <Link to={`/exchanges/${exchange._id}`}>
-                      <Eye className="h-4 w-4" />
-                      View Details
-                    </Link>
-                  </Button>
                 </div>
-                {exchange.status === 'completed' && !hasReview && (
-                  <Button variant="outline" size="sm" asChild>
-                    <Link to={`/reviews/create/${exchange._id}`}>
-                      <Star className="h-3 w-3 mr-1" />
-                      Review
-                    </Link>
-                  </Button>
+
+                {/* PROFILE IDENTIFIER MATRIX SUBROW */}
+                <div className="flex items-center gap-3 my-4">
+                  <Avatar className="h-7 w-7 filter grayscale group-hover:grayscale-0 transition-all duration-500 rounded-full ring-1 ring-border/20">
+                    <AvatarImage src={otherUser.profilePic?.url} />
+                    <AvatarFallback className="text-[10px] font-mono">{otherUser.name?.charAt(0)}</AvatarFallback>
+                  </Avatar>
+                  <div className="space-y-0.5">
+                    <div className="text-xs font-medium text-foreground">{otherUser.name}</div>
+                    <div className="flex items-center gap-1 text-[10px] text-muted-foreground/60 font-light">
+                      <Star className="h-2.5 w-2.5 fill-secondary text-secondary" />
+                      <span>{otherUser.rating?.average?.toFixed(1) || '0.0'} ({otherUser.rating?.count || 0})</span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* EXCHANGE CORE STATEMENT TEXT */}
+                <div className="space-y-1.5 mt-2 mb-4">
+                  <h3 className="text-sm font-medium tracking-tight text-foreground group-hover:text-primary transition-colors leading-snug pr-2">{title}</h3>
+                  <p className="text-xs text-muted-foreground/80 font-light truncate">{subtitle}</p>
+                </div>
+
+                {/* OPTIONAL CONTEXT LOG MESSAGE EMBEDS */}
+                {exchange.message && (
+                  <p className="text-xs text-muted-foreground/60 font-light leading-relaxed italic bg-card border border-border/20 p-3 rounded-xl line-clamp-2 mb-4">
+                    "{exchange.message}"
+                  </p>
                 )}
-              </Card>
+
+                {/* CALENDAR ACTIVE SCHEDULE METRIC LABELS */}
+                {exchange.scheduledSessions && exchange.scheduledSessions.length > 0 && (
+                  <div className="flex items-center gap-1.5 text-[10px] font-mono uppercase tracking-wider text-primary font-medium bg-primary/[0.03] border border-primary/10 rounded-lg p-2 mb-4 w-fit">
+                    <Calendar className="h-3 w-3 stroke-[2]" />
+                    <span>{exchange.scheduledSessions.length} Session Sequence Scheduled</span>
+                  </div>
+                )}
+              </div>
+
+              {/* CORE BACKPLANE CTAS NAVIGATION ASSIGNMENTS FOOTPRINT */}
+              <div className="flex items-center gap-6 pt-3 border-t border-border/30 opacity-60 group-hover:opacity-100 transition-opacity duration-300">
+                <Link to={`/exchanges/${exchange._id}`} className="text-xs font-medium uppercase tracking-widest text-foreground hover:text-primary flex items-center gap-1.5 group/link">
+                  View Details <ArrowRight className="h-3 w-3 group-hover/link:translate-x-1 transition-transform" />
+                </Link>
+                
+                {exchange.status === 'completed' && !hasReview && (
+                  <Link to={`/reviews/create/${exchange._id}`} className="text-xs font-medium uppercase tracking-widest text-secondary hover:text-foreground flex items-center gap-1.5 ml-auto transition-colors">
+                    <Star className="h-3.5 w-3.5 stroke-[1.5]" /> Write Review
+                  </Link>
+                )}
+              </div>
+
             </motion.div>
           );
         })}

@@ -239,11 +239,9 @@ const ChatPage = () => {
 
       {/* Loading Overlay */}
       {state.loading && (
-        <div className="fixed inset-0 bg-background/90 backdrop-blur-sm flex flex-col items-center justify-center z-50">
-          <Loader2 className="w-10 h-10 sm:w-12 sm:h-12 animate-spin text-primary mb-4" />
-          <p className="text-sm sm:text-base text-muted-foreground">Loading...</p>
-        </div>
-      )}
+<div className="min-h-screen bg-background text-foreground flex items-center justify-center">
+      <BrandLoader/>
+    </div>      )}
 
       {/* New Chat Modal */}
       <Dialog open={showNewChatModal} onOpenChange={setShowNewChatModal}>
@@ -267,10 +265,9 @@ const ChatPage = () => {
 
             {/* Search Loading */}
             {searchLoading && (
-              <div className="flex items-center justify-center py-8">
-                <Loader2 className="w-5 h-5 animate-spin text-primary mr-2" />
-                <span className="text-sm text-muted-foreground">Searching...</span>
-              </div>
+              <div className="min-h-screen bg-background text-foreground flex items-center justify-center">
+                    <BrandLoader/>
+                  </div>
             )}
 
             {/* Search Results */}

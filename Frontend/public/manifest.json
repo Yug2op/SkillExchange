@@ -1,0 +1,49 @@
+{
+  "name": "SkillExchange: Peer-to-Peer Learning Network",
+  "short_name": "SkillExchange",
+  "description": "Connect with verified learning partners. Swap skills, share expertise, and expand your portfolio for free on our community knowledge network.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0e0915",
+  "theme_color": "#0e0915",
+  "orientation": "portrait",
+  "scope": "/",
+  "id": "/",
+  "categories": ["education", "social", "productivity"],
+  "icons": [
+    {
+      "src": "/icons/icon-192x192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "maskable"
+    },
+    {
+      "src": "/icons/icon-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Find Skills",
+      "short_name": "Search",
+      "url": "/search",
+      "description": "Browse available skill nodes"
+    },
+    {
+      "name": "My Exchanges",
+      "short_name": "Exchanges",
+      "url": "/exchanges",
+      "description": "Manage your active learning sessions"
+    }
+  ],
+  "screenshots": [
+    {
+      "src": "/icons/icon-512x512.png",
+      "sizes": "1280x720",
+      "type": "image/png",
+      "label": "SkillExchange Desktop Dashboard"
+    }
+  ]
+}
