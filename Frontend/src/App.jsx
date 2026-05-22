@@ -48,6 +48,7 @@ import Navbar from './components/Navbar.jsx';
 import { ChatProvider } from './contexts/ChatContext.jsx';
 import { useTheme } from './hooks/useTheme.js';
 import ErrorBoundary from './components/ErrorBoundary.jsx';
+import NotFound from './pages/404-error.jsx';
 
 export default function App() {
   useTheme();
@@ -176,7 +177,7 @@ export default function App() {
                 />
 
                 {/* Error Routes */}
-                <Route path="/404" element={<div className="p-6">404 Not Found</div>} />
+                <Route path="/404" element={<NotFound />} />
                 <Route path="*" element={<Navigate to="/404" replace />} />
               </Routes>
             </Suspense>
