@@ -46,14 +46,10 @@ import ProtectedRoute from './components/ProtectedRoute.jsx';
 import AdminRoute from './components/AdminRoute.jsx';
 import Navbar from './components/Navbar.jsx';
 import { ChatProvider } from './contexts/ChatContext.jsx';
-import { useMe } from '@/hooks/useMe';
-import { useLogout } from '@/hooks/useLogout';
 import { useTheme } from './hooks/useTheme.js';
 import ErrorBoundary from './components/ErrorBoundary.jsx';
 
 export default function App() {
-  const { data: user, isLoading: meLoading } = useMe();
-  const { mutate: doLogout, isPending: loggingOut } = useLogout();
   useTheme();
 
   return (

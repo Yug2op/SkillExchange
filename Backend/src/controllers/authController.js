@@ -355,10 +355,11 @@ export const changePassword = async (req, res, next) => {
 // @access  Public
 export const logout = async (req, res, next) => {
   try {
+    const isProduction = process.env.NODE_ENV === 'production';
     const cookieOptions = {
       httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'lax',
+      secure:  isProduction,
+      sameSite: isProduction ? 'none' : 'lax',
     };
 
     res.clearCookie('token', cookieOptions);

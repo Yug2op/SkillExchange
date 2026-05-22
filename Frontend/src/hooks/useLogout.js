@@ -12,7 +12,7 @@ export function useLogout() {
     onSuccess: (res) => {
       localStorage.removeItem('socketToken');
       // Immediately clear cached current user so header updates without refresh
-      qc.setQueryData(['me'], null);
+      qc.clear();
       // Then refetch to confirm session state
       qc.invalidateQueries({ queryKey: ['me'] });
       toast.success(res.message || 'Logged out');
