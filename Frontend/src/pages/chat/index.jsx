@@ -24,6 +24,7 @@ import {
   AlertCircle,
   Search,
 } from 'lucide-react';
+import BrandLoader from '@/components/BrandLoader.jsx';
 
 const ChatPage = () => {
   const [selectedChatId, setSelectedChatId] = useState(null);

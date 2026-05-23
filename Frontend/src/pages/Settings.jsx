@@ -54,6 +54,7 @@ import {
   Lock,
   Key
 } from 'lucide-react';
+import BrandLoader from '@/components/BrandLoader';
 
 export default function Settings() {
   const navigate = useNavigate();

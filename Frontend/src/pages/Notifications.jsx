@@ -28,6 +28,7 @@ import {
   Calendar,
   AlertCircle
 } from 'lucide-react';
+import BrandLoader from '@/components/BrandLoader';
 
 export default function Notifications() {
   const navigate = useNavigate();

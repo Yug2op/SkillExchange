@@ -32,6 +32,7 @@ import {
   MapPin,
   Loader2
 } from 'lucide-react';
+import BrandLoader from '@/components/BrandLoader';
 
 export default function RequestExchange() {
   const { id } = useParams();

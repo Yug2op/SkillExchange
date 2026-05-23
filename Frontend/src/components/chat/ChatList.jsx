@@ -12,6 +12,7 @@ import {
   RefreshCw,
   Loader2,
 } from 'lucide-react';
+import BrandLoader from '../BrandLoader.jsx';
 
 const ChatList = ({ onChatSelect, selectedChatId, state, actions }) => {
   const [searchQuery, setSearchQuery] = useState('');

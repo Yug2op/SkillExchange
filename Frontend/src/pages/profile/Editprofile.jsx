@@ -21,6 +21,7 @@ import {
   AlertCircle,
   Loader2
 } from 'lucide-react';
+import BrandLoader from '@/components/BrandLoader';
 
 export default function EditProfile() {
   const navigate = useNavigate();

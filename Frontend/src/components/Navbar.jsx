@@ -31,6 +31,7 @@ import useNotifications from '@/hooks/useNotifications';
 
 const Navbar = () => {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [showWorkspaceMenu, setShowWorkspaceMenu] = useState(false);
   const { data: user, isLoading, error } = useMe();
   const { mutate: doLogout, isPending: loggingOut } = useLogout();
   const location = useLocation();
@@ -487,17 +488,84 @@ const Navbar = () => {
                   <div className="w-full h-12 bg-muted rounded-xl animate-pulse" />
                 ) : user ? (
                   <div className="flex flex-col gap-1.5 pt-2">
-                    <Link to="/me" className="flex items-center gap-3 p-2.5 rounded-xl bg-background border border-border/30 mb-2">
-                      <img src={user.profilePic?.url || `https://ui-avatars.com/api/?name=${user.name}&background=random`} alt={user.name} className="w-8 h-8 rounded-full object-cover filter grayscale" />
-                      <div className="min-w-0 flex-1">
-                        <div className="font-medium text-xs truncate text-foreground">{user.name}</div>
-                        <div className="text-[10px] font-mono uppercase tracking-wider text-muted-foreground/50">View Workspace</div>
-                      </div>
-                    </Link>
 
-                    <button onClick={() => doLogout()} disabled={loggingOut} className="flex items-center gap-3 w-full p-3 rounded-xl text-xs font-mono uppercase tracking-wider text-destructive hover:bg-destructive/10 transition-colors disabled:opacity-50">
+
+                    <div className="mb-2">
+                      <button
+                        onClick={() => setShowWorkspaceMenu(!showWorkspaceMenu)}
+                        className="w-full flex items-center gap-3 p-2.5 rounded-xl bg-background border border-border/30"
+                      >
+                        <img
+                          src={
+                            user.profilePic?.url ||
+                            `https://ui-avatars.com/api/?name=${user.name}&background=random`
+                          }
+                          alt={user.name}
+                          className="w-8 h-8 rounded-full object-cover filter grayscale"
+                        />
+
+                        <div className="min-w-0 flex-1 text-left">
+                          <div className="font-medium text-xs truncate text-foreground">
+                            {user.name}
+                          </div>
+
+                          <div className="text-[10px] font-mono uppercase tracking-wider text-muted-foreground/50">
+                            View Workspace
+                          </div>
+                        </div>
+
+                        <ChevronDown
+                          size={14}
+                          className={`text-muted-foreground transition-transform duration-200 ${showWorkspaceMenu ? "rotate-180" : ""
+                            }`}
+                        />
+                      </button>
+
+                      <div
+                        className={`overflow-hidden transition-all duration-300 ${showWorkspaceMenu ? "max-h-60 opacity-100 mt-2" : "max-h-0 opacity-0"
+                          }`}
+                      >
+                        <div className="space-y-1 border border-border/20 rounded-xl p-1 bg-card">
+                          <Link
+                            to="/me"
+                            className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-xs font-mono uppercase tracking-wide text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
+                          >
+                            <User className="h-4 w-4 stroke-[1.5]" />
+                            Profile
+                          </Link>
+
+                          <Link
+                            to="/settings"
+                            className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-xs font-mono uppercase tracking-wide text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
+                          >
+                            <Settings className="h-4 w-4 stroke-[1.5]" />
+                            Settings
+                          </Link>
+
+                          <Link
+                            to="/reviews"
+                            className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-xs font-mono uppercase tracking-wide text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
+                          >
+                            <Star className="h-4 w-4 stroke-[1.5]" />
+                            My Reviews
+                          </Link>
+
+                          <button
+                            onClick={() => doLogout()}
+                            disabled={loggingOut}
+                            className="flex w-full items-center gap-3 px-3 py-2.5 rounded-lg text-xs font-mono uppercase tracking-wide text-destructive hover:bg-destructive/10 transition-colors"
+                          >
+                            <LogOut className="h-4 w-4 stroke-[1.5]" />
+                            {loggingOut ? "Disconnecting..." : "Logout"}
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+
+
+                    {/* <button onClick={() => doLogout()} disabled={loggingOut} className="flex items-center gap-3 w-full p-3 rounded-xl text-xs font-mono uppercase tracking-wider text-destructive hover:bg-destructive/10 transition-colors disabled:opacity-50">
                       <LogOut size={15} /> {loggingOut ? 'Disconnecting...' : 'Logout'}
-                    </button>
+                    </button> */}
                   </div>
                 ) : (
                   <div className="flex flex-col gap-2 pt-2">
