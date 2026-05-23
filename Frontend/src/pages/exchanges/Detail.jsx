@@ -56,6 +56,7 @@ import {
   Edit,
   Loader2
 } from 'lucide-react';
+import BrandLoader from '@/components/BrandLoader';
 
 const statusConfig = {
   pending: {

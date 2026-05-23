@@ -26,7 +26,7 @@ import {
 } from 'lucide-react';
 import { useMe } from '@/hooks/useMe';
 import { useLogout } from '@/hooks/useLogout';
-import { useChat } from '@/contexts/ChatContext'; 
+import { useChat } from '@/contexts/ChatContext';
 import useNotifications from '@/hooks/useNotifications';
 
 const Navbar = () => {
@@ -76,15 +76,14 @@ const Navbar = () => {
 
   const NavLink = ({ item }) => {
     const isActive = activePath === item.path;
-    const { state: chatState } = useChat(); 
+    const { state: chatState } = useChat();
     const totalUnread = Object.values(chatState.unreadCounts).reduce((sum, count) => sum + count, 0);
 
     return (
       <Link
         to={item.path}
-        className={`relative flex items-center gap-2 px-3.5 py-2 text-xs font-mono uppercase tracking-wider transition-colors duration-200 rounded-lg group ${
-          isActive ? 'text-primary font-medium bg-primary/5' : 'text-muted-foreground hover:text-foreground'
-        }`}
+        className={`relative flex items-center gap-2 px-3.5 py-2 text-xs font-mono uppercase tracking-wider transition-colors duration-200 rounded-lg group ${isActive ? 'text-primary font-medium bg-primary/5' : 'text-muted-foreground hover:text-foreground'
+          }`}
       >
         <item.icon size={15} className="shrink-0 stroke-[1.75]" />
         <span className="hidden lg:block">{item.label}</span>
@@ -101,9 +100,8 @@ const Navbar = () => {
     const isAdminPath = activePath.startsWith('/admin');
     return (
       <HeadlessMenu as="div" className="relative">
-        <HeadlessMenu.Button className={`flex items-center gap-1.5 px-3.5 py-2 text-xs font-mono uppercase tracking-wider transition-colors duration-200 rounded-lg ${
-          isAdminPath ? 'text-secondary font-medium bg-secondary/5' : 'text-muted-foreground hover:text-foreground'
-        }`}>
+        <HeadlessMenu.Button className={`flex items-center gap-1.5 px-3.5 py-2 text-xs font-mono uppercase tracking-wider transition-colors duration-200 rounded-lg ${isAdminPath ? 'text-secondary font-medium bg-secondary/5' : 'text-muted-foreground hover:text-foreground'
+          }`}>
           <Settings size={15} className="shrink-0 stroke-[1.75]" />
           <span className="hidden lg:block">Admin</span>
           <ChevronDown size={12} className="opacity-40" />
@@ -121,9 +119,8 @@ const Navbar = () => {
             {adminNavItems.map((item) => (
               <HeadlessMenu.Item key={item.path}>
                 {({ active }) => (
-                  <Link to={item.path} className={`flex w-full items-center rounded-lg px-3 py-2 text-xs font-mono uppercase tracking-wide transition-colors ${
-                    active ? 'bg-muted text-foreground' : 'text-muted-foreground'
-                  }`}>
+                  <Link to={item.path} className={`flex w-full items-center rounded-lg px-3 py-2 text-xs font-mono uppercase tracking-wide transition-colors ${active ? 'bg-muted text-foreground' : 'text-muted-foreground'
+                    }`}>
                     <item.icon className="mr-2.5 h-3.5 w-3.5 stroke-[1.5]" /> {item.label}
                   </Link>
                 )}
@@ -211,9 +208,8 @@ const Navbar = () => {
                           else if (notification.type === 'review_received') navigate('/reviews');
                           else if (['account_deactivated', 'account_activated', 'account_deleted'].includes(notification.type)) navigate('/settings');
                         }}
-                        className={`p-3 rounded-lg cursor-pointer text-left border transition-all ${
-                          !notification.read ? 'border-primary/20 bg-primary/[0.02]' : 'border-transparent hover:bg-muted/40'
-                        }`}
+                        className={`p-3 rounded-lg cursor-pointer text-left border transition-all ${!notification.read ? 'border-primary/20 bg-primary/[0.02]' : 'border-transparent hover:bg-muted/40'
+                          }`}
                       >
                         <div className="flex gap-2.5 items-start">
                           <span className="text-sm shrink-0 mt-0.5">{getIconElement(notification.type)}</span>
@@ -274,27 +270,24 @@ const Navbar = () => {
           <div className="py-1">
             <HeadlessMenu.Item>
               {({ active }) => (
-                <Link to="/me" className={`flex w-full items-center rounded-lg px-3 py-2 text-xs font-mono uppercase tracking-wide transition-colors ${
-                  active ? 'bg-muted text-foreground' : 'text-muted-foreground'
-                }`}>
+                <Link to="/me" className={`flex w-full items-center rounded-lg px-3 py-2 text-xs font-mono uppercase tracking-wide transition-colors ${active ? 'bg-muted text-foreground' : 'text-muted-foreground'
+                  }`}>
                   <User className="mr-2.5 h-3.5 w-3.5 stroke-[1.5]" /> Profile
                 </Link>
               )}
             </HeadlessMenu.Item>
             <HeadlessMenu.Item>
               {({ active }) => (
-                <Link to="/settings" className={`flex w-full items-center rounded-lg px-3 py-2 text-xs font-mono uppercase tracking-wide transition-colors ${
-                  active ? 'bg-muted text-foreground' : 'text-muted-foreground'
-                }`}>
+                <Link to="/settings" className={`flex w-full items-center rounded-lg px-3 py-2 text-xs font-mono uppercase tracking-wide transition-colors ${active ? 'bg-muted text-foreground' : 'text-muted-foreground'
+                  }`}>
                   <Settings className="mr-2.5 h-3.5 w-3.5 stroke-[1.5]" /> Settings
                 </Link>
               )}
             </HeadlessMenu.Item>
             <HeadlessMenu.Item>
               {({ active }) => (
-                <Link to="/reviews" className={`flex w-full items-center rounded-lg px-3 py-2 text-xs font-mono uppercase tracking-wide transition-colors ${
-                  active ? 'bg-muted text-foreground' : 'text-muted-foreground'
-                }`}>
+                <Link to="/reviews" className={`flex w-full items-center rounded-lg px-3 py-2 text-xs font-mono uppercase tracking-wide transition-colors ${active ? 'bg-muted text-foreground' : 'text-muted-foreground'
+                  }`}>
                   <Star className="mr-2.5 h-3.5 w-3.5 stroke-[1.5]" /> My Reviews
                 </Link>
               )}
@@ -303,9 +296,8 @@ const Navbar = () => {
           <div className="pt-1">
             <HeadlessMenu.Item>
               {({ active }) => (
-                <button onClick={() => doLogout()} disabled={loggingOut} className={`flex w-full items-center rounded-lg px-3 py-2 text-xs font-mono uppercase tracking-wide transition-colors font-medium text-destructive ${
-                  active ? 'bg-destructive/10' : ''
-                }`}>
+                <button onClick={() => doLogout()} disabled={loggingOut} className={`flex w-full items-center rounded-lg px-3 py-2 text-xs font-mono uppercase tracking-wide transition-colors font-medium text-destructive ${active ? 'bg-destructive/10' : ''
+                  }`}>
                   <LogOut className="mr-2.5 h-3.5 w-3.5 stroke-[1.5]" /> {loggingOut ? 'Disconnecting...' : 'Logout'}
                 </button>
               )}
@@ -365,31 +357,31 @@ const Navbar = () => {
         <div className="max-w-7xl mx-auto px-6 h-16 flex justify-between items-center">
 
           {/* Logo Frame */}
-          <Link 
-  to="/" 
-  className="flex items-center gap-3.5 group relative select-none focus-visible:outline-none"
-  aria-label="SkillExchange Home Coordinates"
->
-  {/* VISUAL GEOMETRIC HANDSHAKE MARQUE */}
-  <div className="relative w-8 h-8 flex items-center justify-center transition-transform duration-500 ease-[0.16, 1, 0.3, 1] group-hover:scale-[1.04]">
-    
-    {/* Base Shifting Anchor (Skill Left) */}
-    <div className="absolute left-0 w-5 h-5 rounded-md border border-primary/30 bg-primary/5 rotate-45 transition-transform duration-500 ease-[0.16, 1, 0.3, 1] group-hover:rotate-[135deg] group-hover:border-primary/60" />
-    
-    {/* Intersecting Trajectory Anchor (Exchange Right) */}
-    <div className="absolute right-0 w-5 h-5 rounded-md border border-secondary/40 bg-secondary/10 rotate-45 mix-blend-difference dark:mix-blend-screen transition-transform duration-500 ease-[0.16, 1, 0.3, 1] group-hover:rotate-[-45deg] group-hover:border-secondary/70" />
-    
-    {/* Central Core Handshake Node */}
-    <div className="absolute h-1.5 w-1.5 rounded-full bg-foreground border border-background shadow-xs relative z-10" />
-  </div>
+          <Link
+            to="/"
+            className="flex items-center gap-3.5 group relative select-none focus-visible:outline-none"
+            aria-label="SkillExchange Home Coordinates"
+          >
+            {/* VISUAL GEOMETRIC HANDSHAKE MARQUE */}
+            <div className="relative w-8 h-8 flex items-center justify-center transition-transform duration-500 ease-[0.16, 1, 0.3, 1] group-hover:scale-[1.04]">
 
-  {/* TYPOGRAPHY BRAND MARK SYSTEM STRING */}
-  <span className="hidden sm:block font-sans text-base tracking-[-0.03em] text-foreground transition-colors duration-200">
-    <span className="font-light text-muted-foreground/80 group-hover:text-foreground transition-colors">Skill</span>
-    <span className="font-semibold text-foreground">Exchange</span>
-    <span className="text-primary font-black inline-block ml-0.5 animate-pulse">.</span>
-  </span>
-</Link>
+              {/* Base Shifting Anchor (Skill Left) */}
+              <div className="absolute left-0 w-5 h-5 rounded-md border border-primary/30 bg-primary/5 rotate-45 transition-transform duration-500 ease-[0.16, 1, 0.3, 1] group-hover:rotate-[135deg] group-hover:border-primary/60" />
+
+              {/* Intersecting Trajectory Anchor (Exchange Right) */}
+              <div className="absolute right-0 w-5 h-5 rounded-md border border-secondary/40 bg-secondary/10 rotate-45 mix-blend-difference dark:mix-blend-screen transition-transform duration-500 ease-[0.16, 1, 0.3, 1] group-hover:rotate-[-45deg] group-hover:border-secondary/70" />
+
+              {/* Central Core Handshake Node */}
+              <div className="absolute h-1.5 w-1.5 rounded-full bg-foreground border border-background shadow-xs relative z-10" />
+            </div>
+
+            {/* TYPOGRAPHY BRAND MARK SYSTEM STRING */}
+            <span className="hidden sm:block font-sans text-base tracking-[-0.03em] text-foreground transition-colors duration-200">
+              <span className="font-light text-muted-foreground/80 group-hover:text-foreground transition-colors">Skill</span>
+              <span className="font-semibold text-foreground">Exchange</span>
+              <span className="text-primary font-black inline-block ml-0.5 animate-pulse">.</span>
+            </span>
+          </Link>
 
           {/* Desktop/Tablet Middle Navigation Array */}
           {user && (
@@ -441,7 +433,7 @@ const Navbar = () => {
               onClick={() => setIsMobileMenuOpen(false)}
               className="fixed inset-0 bg-background/40 backdrop-blur-xs z-50 md:hidden"
             />
-            
+
             <motion.div
               initial={{ x: '100%' }}
               animate={{ x: 0 }}
@@ -467,9 +459,8 @@ const Navbar = () => {
                           {adminNavItems.map(adminItem => {
                             const isActive = activePath === adminItem.path;
                             return (
-                              <Link key={adminItem.path} to={adminItem.path} className={`flex items-center gap-4 p-3 rounded-xl text-xs font-mono uppercase tracking-wider transition-colors ${
-                                isActive ? 'bg-primary/10 text-primary font-medium' : 'hover:bg-muted/50 text-muted-foreground'
-                              }`}>
+                              <Link key={adminItem.path} to={adminItem.path} className={`flex items-center gap-4 p-3 rounded-xl text-xs font-mono uppercase tracking-wider transition-colors ${isActive ? 'bg-primary/10 text-primary font-medium' : 'hover:bg-muted/50 text-muted-foreground'
+                                }`}>
                                 <adminItem.icon size={16} /> {adminItem.label}
                               </Link>
                             );
@@ -479,9 +470,8 @@ const Navbar = () => {
                     }
                     const isActive = activePath === item.path;
                     return (
-                      <Link key={item.path} to={item.path} className={`flex items-center gap-4 p-3 rounded-xl text-xs font-mono uppercase tracking-wider transition-colors ${
-                        isActive ? 'bg-primary/10 text-primary font-medium' : 'hover:bg-muted/50 text-muted-foreground'
-                      }`}>
+                      <Link key={item.path} to={item.path} className={`flex items-center gap-4 p-3 rounded-xl text-xs font-mono uppercase tracking-wider transition-colors ${isActive ? 'bg-primary/10 text-primary font-medium' : 'hover:bg-muted/50 text-muted-foreground'
+                        }`}>
                         <item.icon size={16} /> {item.label}
                       </Link>
                     );
@@ -492,7 +482,7 @@ const Navbar = () => {
               {/* Mobile Footer Status Blocks Panel controls */}
               <div className="mt-auto space-y-4 pt-4 border-t border-border/20">
                 <ThemeToggle isMobile={true} />
-                
+
                 {isLoading ? (
                   <div className="w-full h-12 bg-muted rounded-xl animate-pulse" />
                 ) : user ? (
@@ -504,7 +494,7 @@ const Navbar = () => {
                         <div className="text-[10px] font-mono uppercase tracking-wider text-muted-foreground/50">View Workspace</div>
                       </div>
                     </Link>
-                    
+
                     <button onClick={() => doLogout()} disabled={loggingOut} className="flex items-center gap-3 w-full p-3 rounded-xl text-xs font-mono uppercase tracking-wider text-destructive hover:bg-destructive/10 transition-colors disabled:opacity-50">
                       <LogOut size={15} /> {loggingOut ? 'Disconnecting...' : 'Logout'}
                     </button>
