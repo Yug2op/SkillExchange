@@ -63,11 +63,10 @@ export default function App() {
           </header>
 
           <main className='overflow-x-hidden'>
-            <Suspense 
+            <Suspense
               fallback={
-                <div className="flex items-center justify-center min-h-screen">
-                  <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500"></div>
-                  <span className="ml-3 text-lg text-gray-600 dark:text-gray-300">Loading page...</span>
+                <div className="min-h-screen bg-background text-foreground flex items-center justify-center">
+                  <BrandLoader />
                 </div>
               }
             >
