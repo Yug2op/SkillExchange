@@ -49,6 +49,7 @@ import { ChatProvider } from './contexts/ChatContext.jsx';
 import { useTheme } from './hooks/useTheme.js';
 import ErrorBoundary from './components/ErrorBoundary.jsx';
 import NotFound from './pages/404-error.jsx';
+import BrandLoader from './components/BrandLoader.jsx';
 
 export default function App() {
   useTheme();
